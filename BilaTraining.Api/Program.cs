@@ -17,7 +17,8 @@ builder.Services.AddCors(options =>
                 "https://localhost:4200",
                 "http://localhost:5173",
                 "https://localhost:5173",
-                "https://hadley-unrefutable-superrespectably.ngrok-free.dev")
+                "https://hadley-unrefutable-superrespectably.ngrok-free.dev",
+                "https://bilatraining-front.netlify.app")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
