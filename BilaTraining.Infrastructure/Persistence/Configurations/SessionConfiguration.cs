@@ -11,7 +11,7 @@ internal sealed class SessionConfiguration : IEntityTypeConfiguration<Session>
     {
         builder.ToTable("Sessions", table =>
         {
-            table.HasCheckConstraint("CK_Sessions_EndAfterStart", "[EndAtUtc] > [StartAtUtc]");
+            table.HasCheckConstraint("CK_Sessions_EndAfterStart", "\"EndAtUtc\" > \"StartAtUtc\"");
         });
 
         builder.HasKey(x => x.Id);
@@ -21,13 +21,7 @@ internal sealed class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.Property(x => x.ClientId).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(2000);
 
-        builder.Property(x => x.StartAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.EndAtUtc).HasColumnType("datetime2(0)");
         builder.Property(x => x.Status).HasConversion<byte>().IsRequired();
-
-        builder.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.DeletedAtUtc).HasColumnType("datetime2(0)");
 
         builder.HasIndex(x => new { x.WorkspaceId, x.StartAtUtc })
             .HasDatabaseName("IX_Sessions_WorkspaceId_StartAtUtc");

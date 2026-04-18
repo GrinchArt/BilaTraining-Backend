@@ -13,8 +13,6 @@ internal sealed class WorkspaceClientConfiguration : IEntityTypeConfiguration<Wo
         builder.HasKey(x => new { x.WorkspaceId, x.ClientId })
             .HasName("PK_WorkspaceClients");
 
-        builder.Property(x => x.AddedAtUtc).HasColumnType("datetime2(0)");
-
         builder.HasOne<Workspace>()
             .WithMany()
             .HasForeignKey(x => x.WorkspaceId)

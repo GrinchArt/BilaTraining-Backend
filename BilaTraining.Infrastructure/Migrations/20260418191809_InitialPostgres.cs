@@ -32,10 +32,10 @@ namespace BilaTraining.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     DisplayName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: true),
+                    DeletedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     UserName = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: false),
                     NormalizedUserName = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: true),
                     Email = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: false),
@@ -173,10 +173,10 @@ namespace BilaTraining.Infrastructure.Migrations
                     Phone = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Email = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: true),
                     Notes = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: true)
+                    DeletedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -198,10 +198,10 @@ namespace BilaTraining.Infrastructure.Migrations
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: true)
+                    DeletedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -223,10 +223,10 @@ namespace BilaTraining.Infrastructure.Migrations
                     Name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     ColorHex = table.Column<string>(type: "character(7)", fixedLength: true, maxLength: 7, nullable: true),
-                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: true)
+                    DeletedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -248,18 +248,18 @@ namespace BilaTraining.Infrastructure.Migrations
                     WorkspaceId = table.Column<Guid>(type: "uuid", nullable: false),
                     ClientId = table.Column<Guid>(type: "uuid", nullable: false),
                     Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    StartAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
-                    EndAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
+                    StartAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<byte>(type: "smallint", nullable: false),
-                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: true)
+                    DeletedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Sessions", x => x.Id);
-                    table.CheckConstraint("CK_Sessions_EndAfterStart", "[EndAtUtc] > [StartAtUtc]");
+                    table.CheckConstraint("CK_Sessions_EndAfterStart", "\"EndAtUtc\" > \"StartAtUtc\"");
                     table.ForeignKey(
                         name: "FK_Sessions_Clients_ClientId",
                         column: x => x.ClientId,
@@ -286,7 +286,7 @@ namespace BilaTraining.Infrastructure.Migrations
                 {
                     WorkspaceId = table.Column<Guid>(type: "uuid", nullable: false),
                     ClientId = table.Column<Guid>(type: "uuid", nullable: false),
-                    AddedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false)
+                    AddedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -314,7 +314,7 @@ namespace BilaTraining.Infrastructure.Migrations
                     ExerciseId = table.Column<Guid>(type: "uuid", nullable: false),
                     SortOrder = table.Column<int>(type: "integer", nullable: false),
                     Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2(0)", nullable: false)
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -387,7 +387,7 @@ namespace BilaTraining.Infrastructure.Migrations
                 table: "Clients",
                 columns: new[] { "UserId", "Email" },
                 unique: true,
-                filter: "[Email] IS NOT NULL AND [IsDeleted] = 0");
+                filter: "\"Email\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Exercises_UserId",
@@ -440,7 +440,7 @@ namespace BilaTraining.Infrastructure.Migrations
                 table: "Users",
                 column: "Email",
                 unique: true,
-                filter: "[Email] IS NOT NULL AND [IsDeleted] = 0");
+                filter: "\"Email\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",

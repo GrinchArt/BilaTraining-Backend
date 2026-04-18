@@ -18,10 +18,6 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.Property(x => x.ColorHex).HasMaxLength(7).IsFixedLength();
 
-        builder.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.DeletedAtUtc).HasColumnType("datetime2(0)");
-
         builder.HasOne<AppUser>()
             .WithMany()
             .HasForeignKey(x => x.UserId)

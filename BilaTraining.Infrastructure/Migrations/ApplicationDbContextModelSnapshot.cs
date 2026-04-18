@@ -29,10 +29,10 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .HasMaxLength(320)
@@ -59,7 +59,7 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -69,7 +69,7 @@ namespace BilaTraining.Infrastructure.Migrations
                     b.HasIndex("UserId", "Email")
                         .IsUnique()
                         .HasDatabaseName("IX_Clients_UserId_Email")
-                        .HasFilter("[Email] IS NOT NULL AND [IsDeleted] = 0");
+                        .HasFilter("\"Email\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
                     b.ToTable("Clients", (string)null);
                 });
@@ -85,10 +85,10 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -103,7 +103,7 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -125,13 +125,13 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("EndAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -141,13 +141,13 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime>("StartAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<byte>("Status")
                         .HasColumnType("smallint");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -168,7 +168,7 @@ namespace BilaTraining.Infrastructure.Migrations
 
                     b.ToTable("Sessions", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Sessions_EndAfterStart", "[EndAtUtc] > [StartAtUtc]");
+                            t.HasCheckConstraint("CK_Sessions_EndAfterStart", "\"EndAtUtc\" > \"StartAtUtc\"");
                         });
                 });
 
@@ -179,7 +179,7 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
@@ -254,10 +254,10 @@ namespace BilaTraining.Infrastructure.Migrations
                         .IsFixedLength();
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -272,7 +272,7 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("character varying(150)");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -293,7 +293,7 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("AddedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("WorkspaceId", "ClientId")
                         .HasName("PK_WorkspaceClients");
@@ -317,10 +317,10 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(200)
@@ -367,7 +367,7 @@ namespace BilaTraining.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -379,7 +379,7 @@ namespace BilaTraining.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("IX_Users_Email")
-                        .HasFilter("[Email] IS NOT NULL AND [IsDeleted] = 0");
+                        .HasFilter("\"Email\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");

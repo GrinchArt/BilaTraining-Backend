@@ -20,14 +20,10 @@ internal sealed class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(x => x.Email).HasMaxLength(320);
         builder.Property(x => x.Notes).HasMaxLength(1000);
 
-        builder.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.DeletedAtUtc).HasColumnType("datetime2(0)");
-
         builder.HasIndex(x => new { x.UserId, x.Email })
             .IsUnique()
             .HasDatabaseName("IX_Clients_UserId_Email")
-            .HasFilter("[Email] IS NOT NULL AND [IsDeleted] = 0");
+            .HasFilter("\"Email\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
         builder.HasOne<AppUser>()
             .WithMany()

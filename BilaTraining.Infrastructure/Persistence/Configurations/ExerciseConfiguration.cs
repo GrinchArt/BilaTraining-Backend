@@ -18,10 +18,6 @@ internal sealed class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.Property(x => x.Category).HasMaxLength(100);
         builder.Property(x => x.Notes).HasMaxLength(500);
 
-        builder.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(0)");
-        builder.Property(x => x.DeletedAtUtc).HasColumnType("datetime2(0)");
-
         builder.HasOne<AppUser>()
             .WithMany()
             .HasForeignKey(x => x.UserId)
