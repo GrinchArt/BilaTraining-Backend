@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BilaTraining.Api/BilaTraining.Api.csproj" />
+  <Project Path="BilaTraining.Application/BilaTraining.Application.csproj" />
+  <Project Path="BilaTraining.Domain/BilaTraining.Domain.csproj" />
+  <Project Path="BilaTraining.Infrastructure/BilaTraining.Infrastructure.csproj" />
+</Solution>

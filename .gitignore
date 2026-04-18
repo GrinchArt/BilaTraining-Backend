@@ -1,0 +1,51 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Archives / logs
+*.zip
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# .NET build output
+**/bin/
+**/obj/
+TestResults/
+
+# Frontend build output
+**/node_modules/
+**/dist/
+**/.angular/
+**/.angular/cache/
+**/.vite/
+**/coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+
+# Keep production settings out of git if they contain real secrets.
+# Remove this rule only if the file contains placeholders only.
+BilaTraining.Api/appsettings.json
+
+# Local database / tooling files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary / cache files
+*.tmp
+*.temp
+*.cache
