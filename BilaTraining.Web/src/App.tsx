@@ -15,6 +15,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useParams,
 } from 'react-router-dom';
 
 import { useAuth, type AuthenticatedFetch } from './auth';
@@ -149,6 +150,30 @@ function App() {
           element={
             <ProtectedRoute>
               <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="calendar/day/:dayKey"
+          element={
+            <ProtectedRoute>
+              <CalendarDayPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="calendar/day/:dayKey/session/new"
+          element={
+            <ProtectedRoute>
+              <CalendarSessionFormPage mode="create" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="calendar/day/:dayKey/session/:sessionId"
+          element={
+            <ProtectedRoute>
+              <CalendarSessionFormPage mode="edit" />
             </ProtectedRoute>
           }
         />
@@ -1674,20 +1699,11 @@ function CalendarPage() {
   const navigate = useNavigate();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
-  const [selectedDay, setSelectedDay] = useState<Date>(today);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [createForm, setCreateForm] = useState({
-    workspaceId: '',
-    clientId: '',
-    startAtLocal: combineDayAndTime(today, '09:00'),
-    endAtLocal: combineDayAndTime(today, '10:00'),
-    notes: '',
-  });
 
   const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
   const workspaceById = useMemo(() => new Map(workspaces.map((workspace) => [workspace.id, workspace])), [workspaces]);
@@ -1717,14 +1733,6 @@ function CalendarPage() {
     void loadCalendar();
   }, [loadCalendar]);
 
-  useEffect(() => {
-    setCreateForm((current) => ({
-      ...current,
-      startAtLocal: combineDayAndTime(selectedDay, extractTime(current.startAtLocal) ?? '09:00'),
-      endAtLocal: combineDayAndTime(selectedDay, extractTime(current.endAtLocal) ?? '10:00'),
-    }));
-  }, [selectedDay]);
-
   const monthDays = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
 
   const sessionsByDay = useMemo(() => {
@@ -1744,39 +1752,308 @@ function CalendarPage() {
     return map;
   }, [sessions]);
 
-  const selectedDayKey = toDayKey(selectedDay);
-  const selectedDaySessions = useMemo(
-    () => sessionsByDay.get(selectedDayKey) ?? [],
-    [selectedDayKey, sessionsByDay],
-  );
-
-  const changeCreateField =
-    (field: keyof typeof createForm) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      setCreateForm((current) => ({
-        ...current,
-        [field]: event.target.value,
-      }));
-    };
-
   const moveMonth = (offset: number) => {
     setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
   };
 
   const handlePickDay = (day: Date) => {
     const normalized = startOfDay(day);
-    setSelectedDay(normalized);
-    if (
-      normalized.getFullYear() !== visibleMonth.getFullYear() ||
-      normalized.getMonth() !== visibleMonth.getMonth()
-    ) {
-      setVisibleMonth(new Date(normalized.getFullYear(), normalized.getMonth(), 1));
-    }
+    navigate(`/calendar/day/${toDayKey(normalized)}`);
   };
 
-  const handleCreateSession = async (event: FormEvent<HTMLFormElement>) => {
+  return (
+    <section className="calendar-page">
+      <div className="exercise-page__header">
+        <div>
+          <p className="feature-page__eyebrow">Calendar</p>
+          <h2>Calendar</h2>
+          <p>Plan the month first. Open a day to see every entry, including overlapping sessions.</p>
+        </div>
+      </div>
+
+      {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
+
+      <section className="card calendar-board">
+        <div className="calendar-board__header">
+          <button type="button" className="button button--secondary" onClick={() => moveMonth(-1)}>
+            Prev
+          </button>
+          <div className="calendar-board__title">
+            <h3>{visibleMonth.toLocaleDateString([], { month: 'long', year: 'numeric' })}</h3>
+            <p>{sessionsByDay.size} active day entries</p>
+          </div>
+          <button type="button" className="button button--secondary" onClick={() => moveMonth(1)}>
+            Next
+          </button>
+        </div>
+
+        <div className="calendar-board__weekdays">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+
+        <div className="calendar-board__days">
+          {monthDays.map((day) => {
+            const dayKey = toDayKey(day);
+            const daySessions = sessionsByDay.get(dayKey) ?? [];
+            const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
+            const isToday = dayKey === toDayKey(today);
+
+            return (
+              <button
+                type="button"
+                key={dayKey}
+                className={`calendar-day${isCurrentMonth ? '' : ' is-outside'}${isToday ? ' is-today' : ''}`}
+                onClick={() => handlePickDay(day)}
+              >
+                <span className="calendar-day__number">{day.getDate()}</span>
+                <div className="calendar-day__items">
+                  {daySessions.slice(0, 2).map((session) => {
+                    const workspace = workspaceById.get(session.workspaceId);
+                    const client = clientById.get(session.clientId);
+                    const workspaceColor = normalizeColorHex(workspace?.colorHex);
+
+                    return (
+                      <span
+                        key={session.id}
+                        className={`calendar-chip calendar-chip--${session.status}`}
+                        style={{
+                          backgroundColor: hexToRgba(workspaceColor, 0.22),
+                          borderColor: hexToRgba(workspaceColor, 0.48),
+                        }}
+                      >
+                        <strong>{formatTimeShort(session.startAtUtc)}</strong>
+                        <span>{client ? formatClientName(client) : workspace?.name ?? 'Session'}</span>
+                      </span>
+                    );
+                  })}
+                  {daySessions.length > 2 ? <span className="calendar-day__more">+{daySessions.length - 2}</span> : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function CalendarDayPage() {
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const navigate = useNavigate();
+  const { dayKey } = useParams<{ dayKey: string }>();
+  const selectedDay = parseDayKey(dayKey) ?? startOfDay(new Date());
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
+  const workspaceById = useMemo(() => new Map(workspaces.map((workspace) => [workspace.id, workspace])), [workspaces]);
+
+  const loadDay = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+      ]);
+
+      setSessions(nextSessions);
+      setClients(nextClients);
+      setWorkspaces(nextWorkspaces);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiBaseUrl, authenticatedFetch]);
+
+  useEffect(() => {
+    void loadDay();
+  }, [loadDay]);
+
+  const selectedDaySessions = useMemo(
+    () =>
+      sessions
+        .filter((session) => toDayKey(new Date(session.startAtUtc)) === toDayKey(selectedDay))
+        .sort((left, right) => new Date(left.startAtUtc).getTime() - new Date(right.startAtUtc).getTime()),
+    [selectedDay, sessions],
+  );
+
+  return (
+    <section className="calendar-page">
+      <div className="exercise-page__header">
+        <div>
+          <p className="feature-page__eyebrow">Calendar Day</p>
+          <h2>{selectedDay.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+          <p>All sessions for this day are listed here, including overlapping ones.</p>
+        </div>
+        <div className="calendar-toolbar">
+          <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
+            ← Back
+          </button>
+          <button
+            type="button"
+            className="button"
+            aria-label="Add session"
+            onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/new`)}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
+
+      <div className="calendar-page__grid calendar-page__grid--detail">
+        <section className="card calendar-day-panel">
+          <div className="exercise-page__section-header">
+            <h3>Sessions</h3>
+            <span className="exercise-page__count">{selectedDaySessions.length}</span>
+          </div>
+
+          {isLoading ? <p className="exercise-page__state">Loading sessions...</p> : null}
+          {!isLoading && selectedDaySessions.length === 0 ? (
+            <p className="exercise-page__state">No sessions yet. Add the first one for this day.</p>
+          ) : null}
+          {!isLoading && selectedDaySessions.length > 0 ? (
+            <div className="exercise-list">
+              {selectedDaySessions.map((session) => {
+                const workspace = workspaceById.get(session.workspaceId);
+                const client = clientById.get(session.clientId);
+
+                return (
+                  <article key={session.id} className="exercise-item">
+                    <div className="exercise-item__content">
+                      <div className="exercise-item__title-row">
+                        <h4>{client ? formatClientName(client) : 'Unknown client'}</h4>
+                        <span className={`exercise-item__tag calendar-status-tag calendar-status-tag--${session.status}`}>
+                          {sessionStatusLabel(session.status)}
+                        </span>
+                      </div>
+                      <div className="client-item__meta">
+                        <span>{workspace?.name ?? 'Unknown workspace'}</span>
+                        <span>{formatSessionWindow(session.startAtUtc, session.endAtUtc)}</span>
+                      </div>
+                      {session.notes ? <p>{session.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
+                    </div>
+                    <div className="exercise-item__actions">
+                      <button
+                        type="button"
+                        className="button button--secondary"
+                        onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/${session.id}`)}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const navigate = useNavigate();
+  const { dayKey, sessionId } = useParams<{ dayKey: string; sessionId: string }>();
+  const selectedDay = parseDayKey(dayKey) ?? startOfDay(new Date());
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [form, setForm] = useState<{
+    workspaceId: string;
+    clientId: string;
+    startAtLocal: string;
+    endAtLocal: string;
+    notes: string;
+    status: SessionStatus;
+  }>({
+    workspaceId: '',
+    clientId: '',
+    startAtLocal: combineDayAndTime(selectedDay, '09:00'),
+    endAtLocal: combineDayAndTime(selectedDay, '10:00'),
+    notes: '',
+    status: 0,
+  });
+
+  const editingSession = useMemo(
+    () => (mode === 'edit' ? sessions.find((session) => session.id === sessionId) ?? null : null),
+    [mode, sessionId, sessions],
+  );
+
+  const loadFormData = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+      ]);
+
+      setSessions(nextSessions);
+      setClients(nextClients);
+      setWorkspaces(nextWorkspaces);
+
+      if (mode === 'edit') {
+        const session = nextSessions.find((item) => item.id === sessionId);
+        if (session) {
+          setForm({
+            workspaceId: session.workspaceId,
+            clientId: session.clientId,
+            startAtLocal: toDateTimeLocalValue(session.startAtUtc),
+            endAtLocal: toDateTimeLocalValue(session.endAtUtc),
+            notes: session.notes ?? '',
+            status: session.status,
+          });
+        }
+      } else {
+        setForm((current) => ({
+          ...current,
+          startAtLocal: combineDayAndTime(selectedDay, extractTime(current.startAtLocal) ?? '09:00'),
+          endAtLocal: combineDayAndTime(selectedDay, extractTime(current.endAtLocal) ?? '10:00'),
+        }));
+      }
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiBaseUrl, authenticatedFetch, mode, selectedDay, sessionId]);
+
+  useEffect(() => {
+    void loadFormData();
+  }, [loadFormData]);
+
+  const handleChange =
+    (field: keyof typeof form) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const value = field === 'status' ? Number(event.target.value) : event.target.value;
+
+      setForm((current) => ({
+        ...current,
+        [field]: value,
+      }));
+    };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!createForm.workspaceId || !createForm.clientId || !createForm.startAtLocal || !createForm.endAtLocal) {
+    if (!form.workspaceId || !form.clientId || !form.startAtLocal || !form.endAtLocal) {
       setErrorMessage('Workspace, client, start time, and end time are required.');
       return;
     }
@@ -1785,25 +2062,40 @@ function CalendarPage() {
     setErrorMessage('');
 
     try {
-      await sendJson(
-        `${apiBaseUrl}/sessions`,
-        'POST',
-        authenticatedFetch,
-        {
-          workspaceId: createForm.workspaceId,
-          clientId: createForm.clientId,
-          notes: createForm.notes.trim() || null,
-          startAtUtc: new Date(createForm.startAtLocal).toISOString(),
-          endAtUtc: new Date(createForm.endAtLocal).toISOString(),
-        },
-        'Failed to create session.',
-      );
+      const payload = {
+        workspaceId: form.workspaceId,
+        clientId: form.clientId,
+        notes: form.notes.trim() || null,
+        startAtUtc: new Date(form.startAtLocal).toISOString(),
+        endAtUtc: new Date(form.endAtLocal).toISOString(),
+      };
 
-      setCreateForm((current) => ({
-        ...current,
-        notes: '',
-      }));
-      await loadCalendar();
+      if (mode === 'edit' && editingSession) {
+        await sendJson(
+          `${apiBaseUrl}/sessions/${editingSession.id}`,
+          'PUT',
+          authenticatedFetch,
+          payload,
+          'Failed to update session.',
+        );
+
+        if (editingSession.status !== form.status) {
+          await sendPatch(
+            `${apiBaseUrl}/sessions/${editingSession.id}/status`,
+            authenticatedFetch,
+            { status: form.status },
+            'Failed to update session status.',
+          );
+        }
+      } else {
+        await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, 'Failed to create session.');
+      }
+
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate(`/calendar/day/${toDayKey(selectedDay)}`);
+      }
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
@@ -1815,170 +2107,78 @@ function CalendarPage() {
     <section className="calendar-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Calendar</p>
-          <h2>Calendar</h2>
-          <p>Plan the month, open a day, and keep parallel sessions visible instead of forcing a single-slot view.</p>
+          <p className="feature-page__eyebrow">Calendar Session</p>
+          <h2>{mode === 'edit' ? 'Edit session' : 'Create session'}</h2>
+          <p>{selectedDay.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
+        <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
-      <div className="calendar-page__grid">
-        <section className="card calendar-board">
-          <div className="calendar-board__header">
-            <button type="button" className="button button--secondary" onClick={() => moveMonth(-1)}>
-              Prev
-            </button>
-            <div className="calendar-board__title">
-              <h3>{visibleMonth.toLocaleDateString([], { month: 'long', year: 'numeric' })}</h3>
-              <p>{sessionsByDay.size} active day entries</p>
+      <section className="card calendar-day-panel">
+        {isLoading ? (
+          <p className="exercise-page__state">Loading form...</p>
+        ) : (
+          <form className="exercise-form" onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="calendar-workspace">Workspace</label>
+              <select id="calendar-workspace" value={form.workspaceId} onChange={handleChange('workspaceId')}>
+                <option value="">Choose workspace</option>
+                {workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))}
+              </select>
             </div>
-            <button type="button" className="button button--secondary" onClick={() => moveMonth(1)}>
-              Next
+
+            <div className="field">
+              <label htmlFor="calendar-client">Client</label>
+              <select id="calendar-client" value={form.clientId} onChange={handleChange('clientId')}>
+                <option value="">Choose client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {formatClientName(client)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="calendar-form__times">
+              <div className="field">
+                <label htmlFor="calendar-start">Start</label>
+                <input id="calendar-start" type="datetime-local" value={form.startAtLocal} onChange={handleChange('startAtLocal')} />
+              </div>
+              <div className="field">
+                <label htmlFor="calendar-end">End</label>
+                <input id="calendar-end" type="datetime-local" value={form.endAtLocal} onChange={handleChange('endAtLocal')} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="calendar-status">Status</label>
+              <select id="calendar-status" value={form.status} onChange={handleChange('status')}>
+                <option value={0}>Planned</option>
+                <option value={1}>Completed</option>
+                <option value={2}>Cancelled</option>
+                <option value={3}>No show</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="calendar-notes">Notes</label>
+              <textarea id="calendar-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
+            </div>
+
+            <button className="submit-button" type="submit" disabled={isSaving}>
+              {isSaving ? (mode === 'edit' ? 'Saving...' : 'Creating...') : mode === 'edit' ? 'Save changes' : 'Create session'}
             </button>
-          </div>
-
-          <div className="calendar-board__weekdays">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (
-              <span key={label}>{label}</span>
-            ))}
-          </div>
-
-          <div className="calendar-board__days">
-            {monthDays.map((day) => {
-              const dayKey = toDayKey(day);
-              const daySessions = sessionsByDay.get(dayKey) ?? [];
-              const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
-              const isToday = dayKey === toDayKey(today);
-              const isSelected = dayKey === selectedDayKey;
-
-              return (
-                <button
-                  type="button"
-                  key={dayKey}
-                  className={`calendar-day${isCurrentMonth ? '' : ' is-outside'}${isToday ? ' is-today' : ''}${isSelected ? ' is-selected' : ''}`}
-                  onClick={() => handlePickDay(day)}
-                >
-                  <span className="calendar-day__number">{day.getDate()}</span>
-                  <div className="calendar-day__items">
-                    {daySessions.slice(0, 3).map((session) => {
-                      const workspace = workspaceById.get(session.workspaceId);
-                      const client = clientById.get(session.clientId);
-
-                      return (
-                        <span key={session.id} className={`calendar-chip calendar-chip--${session.status}`}>
-                          <strong>{formatTimeShort(session.startAtUtc)}</strong>
-                          <span>{client ? formatClientName(client) : workspace?.name ?? 'Session'}</span>
-                        </span>
-                      );
-                    })}
-                    {daySessions.length > 3 ? (
-                      <span className="calendar-day__more">+{daySessions.length - 3} more</span>
-                    ) : null}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="card calendar-day-panel">
-          <div className="exercise-page__section-header">
-            <h3>{selectedDay.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-            <span className="exercise-page__count">{selectedDaySessions.length}</span>
-          </div>
-
-          <div className="calendar-day-panel__stack">
-            <section>
-              <p className="calendar-day-panel__caption">Sessions</p>
-              {isLoading ? <p className="exercise-page__state">Loading sessions...</p> : null}
-              {!isLoading && selectedDaySessions.length === 0 ? (
-                <p className="exercise-page__state">No sessions yet. Create the first one for this day below.</p>
-              ) : null}
-              {!isLoading && selectedDaySessions.length > 0 ? (
-                <div className="exercise-list">
-                  {selectedDaySessions.map((session) => {
-                    const workspace = workspaceById.get(session.workspaceId);
-                    const client = clientById.get(session.clientId);
-
-                    return (
-                      <article key={session.id} className="exercise-item">
-                        <div className="exercise-item__content">
-                          <div className="exercise-item__title-row">
-                            <h4>{client ? formatClientName(client) : 'Unknown client'}</h4>
-                            <span className={`exercise-item__tag calendar-status-tag calendar-status-tag--${session.status}`}>
-                              {sessionStatusLabel(session.status)}
-                            </span>
-                          </div>
-                          <div className="client-item__meta">
-                            <span>{workspace?.name ?? 'Unknown workspace'}</span>
-                            <span>{formatSessionWindow(session.startAtUtc, session.endAtUtc)}</span>
-                          </div>
-                          {session.notes ? <p>{session.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
-                        </div>
-                        <div className="exercise-item__actions">
-                          <button type="button" className="button button--secondary" onClick={() => navigate('/sessions')}>
-                            Manage
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </section>
-
-            <section>
-              <p className="calendar-day-panel__caption">Add session</p>
-              <form className="exercise-form" onSubmit={handleCreateSession}>
-                <div className="field">
-                  <label htmlFor="calendar-workspace">Workspace</label>
-                  <select id="calendar-workspace" value={createForm.workspaceId} onChange={changeCreateField('workspaceId')}>
-                    <option value="">Choose workspace</option>
-                    {workspaces.map((workspace) => (
-                      <option key={workspace.id} value={workspace.id}>
-                        {workspace.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="calendar-client">Client</label>
-                  <select id="calendar-client" value={createForm.clientId} onChange={changeCreateField('clientId')}>
-                    <option value="">Choose client</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {formatClientName(client)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="calendar-form__times">
-                  <div className="field">
-                    <label htmlFor="calendar-start">Start</label>
-                    <input id="calendar-start" type="datetime-local" value={createForm.startAtLocal} onChange={changeCreateField('startAtLocal')} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="calendar-end">End</label>
-                    <input id="calendar-end" type="datetime-local" value={createForm.endAtLocal} onChange={changeCreateField('endAtLocal')} />
-                  </div>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="calendar-notes">Notes</label>
-                  <textarea id="calendar-notes" rows={4} value={createForm.notes} onChange={changeCreateField('notes')} />
-                </div>
-
-                <button className="submit-button" type="submit" disabled={isSaving}>
-                  {isSaving ? 'Creating...' : 'Add session'}
-                </button>
-              </form>
-            </section>
-          </div>
-        </section>
-      </div>
+          </form>
+        )}
+      </section>
     </section>
   );
 }
@@ -2164,6 +2364,21 @@ function toDayKey(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function parseDayKey(value: string | undefined): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return startOfDay(parsed);
 }
 
 function buildMonthGrid(month: Date): Date[] {

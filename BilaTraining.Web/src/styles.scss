@@ -575,6 +575,10 @@ a {
   gap: 16px;
 }
 
+.calendar-page__grid--detail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .calendar-board,
 .calendar-day-panel {
   padding: 16px;
@@ -586,6 +590,12 @@ a {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .calendar-board__title h3,
@@ -621,9 +631,10 @@ a {
 .calendar-day {
   display: grid;
   align-content: start;
-  gap: 8px;
-  min-height: 124px;
-  padding: 10px;
+  gap: 6px;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 8px 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: rgba(14, 19, 34, 0.95);
@@ -634,11 +645,6 @@ a {
 
 .calendar-day.is-outside {
   opacity: 0.45;
-}
-
-.calendar-day.is-selected {
-  border-color: rgba(95, 149, 255, 0.92);
-  box-shadow: 0 0 0 1px rgba(95, 149, 255, 0.92);
 }
 
 .calendar-day.is-today .calendar-day__number {
@@ -659,20 +665,23 @@ a {
 
 .calendar-day__items {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
+  align-content: start;
 }
 
 .calendar-chip {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
-  padding: 6px 8px;
+  min-height: 24px;
+  padding: 3px 6px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(37, 117, 255, 0.16);
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .calendar-chip strong,
@@ -680,6 +689,14 @@ a {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.calendar-chip strong {
+  flex: 0 0 auto;
+}
+
+.calendar-chip span {
+  min-width: 0;
 }
 
 .calendar-chip--0 {
@@ -747,7 +764,11 @@ a {
   }
 
   .calendar-page__grid {
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-page__grid--detail {
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   }
 }
 
@@ -776,12 +797,22 @@ a {
     min-width: 80px;
   }
 
+  .calendar-toolbar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .calendar-day {
-    min-height: 112px;
-    padding: 8px;
+    padding: 6px 4px;
   }
 
   .calendar-form__times {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-chip {
+    min-height: 22px;
+    padding: 2px 5px;
+    font-size: 10px;
   }
 }
