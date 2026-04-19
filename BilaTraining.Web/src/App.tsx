@@ -13,7 +13,6 @@ import {
   Outlet,
   Route,
   Routes,
-  useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom';
@@ -184,7 +183,6 @@ function App() {
 }
 
 function AppShell() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, logout, session } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -277,7 +275,7 @@ function AppShell() {
         </div>
       </aside>
 
-      <main className="shell__content" key={location.pathname}>
+      <main className="shell__content">
         <Outlet />
       </main>
     </div>
