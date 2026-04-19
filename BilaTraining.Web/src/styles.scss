@@ -421,6 +421,11 @@ a {
   gap: 16px;
 }
 
+.calendar-page {
+  display: grid;
+  gap: 16px;
+}
+
 .exercise-page__header h2,
 .exercise-page__section-header h3,
 .exercise-item h4 {
@@ -550,6 +555,188 @@ a {
   font-weight: 600;
 }
 
+.field select {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: rgba(11, 16, 31, 0.92);
+  color: var(--text);
+}
+
+.field select:focus {
+  outline: 1px solid rgba(95, 149, 255, 0.92);
+  border-color: rgba(95, 149, 255, 0.92);
+  box-shadow: 0 0 0 4px rgba(37, 117, 255, 0.14);
+}
+
+.calendar-page__grid {
+  display: grid;
+  gap: 16px;
+}
+
+.calendar-board,
+.calendar-day-panel {
+  padding: 16px;
+}
+
+.calendar-board__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.calendar-board__title h3,
+.calendar-board__title p {
+  margin: 0;
+}
+
+.calendar-board__title p,
+.calendar-day-panel__caption {
+  color: var(--text-muted);
+}
+
+.calendar-board__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.calendar-board__weekdays span {
+  text-align: center;
+}
+
+.calendar-board__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-day {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 124px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(14, 19, 34, 0.95);
+  color: var(--text);
+  text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.calendar-day.is-outside {
+  opacity: 0.45;
+}
+
+.calendar-day.is-selected {
+  border-color: rgba(95, 149, 255, 0.92);
+  box-shadow: 0 0 0 1px rgba(95, 149, 255, 0.92);
+}
+
+.calendar-day.is-today .calendar-day__number {
+  color: #ffffff;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
+}
+
+.calendar-day__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.calendar-day__items {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calendar-chip {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(37, 117, 255, 0.16);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.calendar-chip strong,
+.calendar-chip span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.calendar-chip--0 {
+  background: rgba(37, 117, 255, 0.18);
+}
+
+.calendar-chip--1 {
+  background: rgba(79, 208, 90, 0.18);
+}
+
+.calendar-chip--2,
+.calendar-chip--3 {
+  background: rgba(255, 91, 110, 0.18);
+}
+
+.calendar-day__more {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calendar-day-panel__stack {
+  display: grid;
+  gap: 20px;
+}
+
+.calendar-day-panel__caption {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.calendar-form__times {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-status-tag--0 {
+  background: rgba(37, 117, 255, 0.18);
+  border-color: rgba(85, 127, 220, 0.44);
+  color: #9fb5ff;
+}
+
+.calendar-status-tag--1 {
+  background: rgba(79, 208, 90, 0.18);
+  border-color: rgba(79, 208, 90, 0.42);
+  color: #9af3a2;
+}
+
+.calendar-status-tag--2,
+.calendar-status-tag--3 {
+  background: rgba(255, 91, 110, 0.16);
+  border-color: rgba(255, 91, 110, 0.36);
+  color: #ff9cab;
+}
+
 .field input[type="search"]::-webkit-search-cancel-button {
   filter: invert(1);
 }
@@ -557,6 +744,10 @@ a {
 @media (min-width: 900px) {
   .exercise-page__grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  }
+
+  .calendar-page__grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
   }
 }
 
@@ -575,5 +766,22 @@ a {
 
   .shell__profile {
     width: 100%;
+  }
+
+  .calendar-board__header {
+    align-items: stretch;
+  }
+
+  .calendar-board__header .button {
+    min-width: 80px;
+  }
+
+  .calendar-day {
+    min-height: 112px;
+    padding: 8px;
+  }
+
+  .calendar-form__times {
+    grid-template-columns: 1fr;
   }
 }

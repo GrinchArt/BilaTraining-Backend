@@ -70,6 +70,27 @@ type WorkspaceFormState = {
   colorHex: string;
 };
 
+type Session = {
+  id: string;
+  workspaceId: string;
+  clientId: string;
+  notes: string | null;
+  startAtUtc: string;
+  endAtUtc: string;
+  status: SessionStatus;
+};
+
+type SessionStatus = 0 | 1 | 2 | 3;
+
+type SessionFormState = {
+  workspaceId: string;
+  clientId: string;
+  notes: string;
+  startAtLocal: string;
+  endAtLocal: string;
+  status: SessionStatus;
+};
+
 function App() {
   return (
     <Routes>
@@ -119,17 +140,7 @@ function App() {
           path="sessions"
           element={
             <ProtectedRoute>
-              <FeaturePage
-                eyebrow="Sessions"
-                title="Sessions"
-                description="This screen will handle scheduling sessions, browsing past ones, and linking them to clients, workspaces, and exercises."
-                heading="Planned first steps"
-                items={[
-                  'List sessions with workspace and client filters',
-                  'Add create and update actions',
-                  'Prepare entry into exercise-set tracking',
-                ]}
-              />
+              <SessionsPage />
             </ProtectedRoute>
           }
         />
@@ -137,17 +148,7 @@ function App() {
           path="calendar"
           element={
             <ProtectedRoute>
-              <FeaturePage
-                eyebrow="Calendar"
-                title="Calendar"
-                description="This page is intentionally a placeholder for now. We will shape the calendar after your comments on the scheduling experience."
-                heading="Planned later"
-                items={[
-                  'Choose the best calendar layout for phones',
-                  'Connect sessions into daily and weekly views',
-                  'Add quick navigation between schedule and session details',
-                ]}
-              />
+              <CalendarPage />
             </ProtectedRoute>
           }
         />
@@ -1317,6 +1318,671 @@ function ExercisesPage() {
   );
 }
 
+function SessionsPage() {
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | `${SessionStatus}`>('all');
+  const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [form, setForm] = useState<SessionFormState>({
+    workspaceId: '',
+    clientId: '',
+    notes: '',
+    startAtLocal: '',
+    endAtLocal: '',
+    status: 0,
+  });
+
+  const workspaceById = useMemo(
+    () => new Map(workspaces.map((workspace) => [workspace.id, workspace])),
+    [workspaces],
+  );
+  const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
+
+  const applySelection = useCallback((session: Session | null) => {
+    if (!session) {
+      setSelectedId(null);
+      setForm({
+        workspaceId: '',
+        clientId: '',
+        notes: '',
+        startAtLocal: '',
+        endAtLocal: '',
+        status: 0,
+      });
+      return;
+    }
+
+    setSelectedId(session.id);
+    setForm({
+      workspaceId: session.workspaceId,
+      clientId: session.clientId,
+      notes: session.notes ?? '',
+      startAtLocal: toDateTimeLocalValue(session.startAtUtc),
+      endAtLocal: toDateTimeLocalValue(session.endAtUtc),
+      status: session.status,
+    });
+  }, []);
+
+  const loadSessionsPage = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+      ]);
+
+      setSessions(nextSessions);
+      setClients(nextClients);
+      setWorkspaces(nextWorkspaces);
+
+      setSelectedId((current) => {
+        const preferred = current ? nextSessions.find((session) => session.id === current) : null;
+        const nextSelected = preferred ?? nextSessions[0] ?? null;
+        applySelection(nextSelected);
+        return nextSelected?.id ?? null;
+      });
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiBaseUrl, applySelection, authenticatedFetch]);
+
+  useEffect(() => {
+    void loadSessionsPage();
+  }, [loadSessionsPage]);
+
+  const filteredSessions = useMemo(() => {
+    const normalizedQuery = search.trim().toLowerCase();
+
+    return sessions.filter((session) => {
+      if (statusFilter !== 'all' && `${session.status}` !== statusFilter) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const clientLabel = formatClientName(clientById.get(session.clientId) ?? emptyClient(session.clientId));
+      const workspaceLabel = workspaceById.get(session.workspaceId)?.name ?? 'Unknown workspace';
+      const statusLabel = sessionStatusLabel(session.status);
+      const haystack = [clientLabel, workspaceLabel, statusLabel, session.notes ?? ''].join(' ').toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [clientById, search, sessions, statusFilter, workspaceById]);
+
+  const selectedSession = useMemo(
+    () => sessions.find((session) => session.id === selectedId) ?? null,
+    [selectedId, sessions],
+  );
+
+  const handleFormChange =
+    (field: keyof SessionFormState) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const value = field === 'status' ? Number(event.target.value) : event.target.value;
+
+      setForm((current) => ({
+        ...current,
+        [field]: value,
+      }));
+    };
+
+  const handleSelectSession = (session: Session) => {
+    setErrorMessage('');
+    applySelection(session);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedSession) {
+      setErrorMessage('Choose a session first.');
+      return;
+    }
+
+    if (!form.workspaceId || !form.clientId || !form.startAtLocal || !form.endAtLocal) {
+      setErrorMessage('Workspace, client, start time, and end time are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage('');
+
+    try {
+      await sendJson(
+        `${apiBaseUrl}/sessions/${selectedSession.id}`,
+        'PUT',
+        authenticatedFetch,
+        {
+          workspaceId: form.workspaceId,
+          clientId: form.clientId,
+          notes: form.notes.trim() || null,
+          startAtUtc: new Date(form.startAtLocal).toISOString(),
+          endAtUtc: new Date(form.endAtLocal).toISOString(),
+        },
+        'Failed to update session.',
+      );
+
+      if (selectedSession.status !== form.status) {
+        await sendPatch(
+          `${apiBaseUrl}/sessions/${selectedSession.id}/status`,
+          authenticatedFetch,
+          { status: form.status },
+          'Failed to update session status.',
+        );
+      }
+
+      await loadSessionsPage();
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (session: Session) => {
+    setIsDeletingId(session.id);
+    setErrorMessage('');
+
+    try {
+      await sendVoid(`${apiBaseUrl}/sessions/${session.id}`, 'DELETE', authenticatedFetch, 'Failed to delete session.');
+      await loadSessionsPage();
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsDeletingId(null);
+    }
+  };
+
+  return (
+    <section className="exercise-page">
+      <div className="exercise-page__header">
+        <div>
+          <p className="feature-page__eyebrow">Sessions</p>
+          <h2>Sessions</h2>
+          <p>Review upcoming and past sessions, edit their details, and keep status changes aligned with the calendar.</p>
+        </div>
+      </div>
+
+      {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
+
+      <div className="exercise-page__grid">
+        <section className="card">
+          <div className="exercise-page__section-header">
+            <h3>Session list</h3>
+            <span className="exercise-page__count">{filteredSessions.length}</span>
+          </div>
+
+          <div className="field">
+            <label htmlFor="session-search">Search</label>
+            <input
+              id="session-search"
+              type="search"
+              placeholder="Client, workspace, note, or status"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="session-statusFilter">Status</label>
+            <select id="session-statusFilter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | `${SessionStatus}`)}>
+              <option value="all">All statuses</option>
+              <option value="0">Planned</option>
+              <option value="1">Completed</option>
+              <option value="2">Cancelled</option>
+              <option value="3">No show</option>
+            </select>
+          </div>
+
+          {isLoading ? <p className="exercise-page__state">Loading sessions...</p> : null}
+
+          {!isLoading && filteredSessions.length === 0 ? (
+            <p className="exercise-page__state">No sessions match the current filters.</p>
+          ) : null}
+
+          {!isLoading && filteredSessions.length > 0 ? (
+            <div className="exercise-list">
+              {filteredSessions.map((session) => {
+                const client = clientById.get(session.clientId);
+                const workspace = workspaceById.get(session.workspaceId);
+                const isActive = session.id === selectedId;
+
+                return (
+                  <article key={session.id} className="exercise-item">
+                    <div className="exercise-item__content">
+                      <div className="exercise-item__title-row">
+                        <h4>{workspace?.name ?? 'Unknown workspace'}</h4>
+                      </div>
+
+                      <div className="client-item__meta">
+                        <span>{client ? formatClientName(client) : 'Unknown client'}</span>
+                        <span>{sessionStatusLabel(session.status)}</span>
+                      </div>
+
+                      <p>{formatSessionWindow(session.startAtUtc, session.endAtUtc)}</p>
+                      {session.notes ? <p>{session.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
+                    </div>
+
+                    <div className="exercise-item__actions">
+                      <button
+                        type="button"
+                        className="button button--secondary"
+                        onClick={() => handleSelectSession(session)}
+                      >
+                        {isActive ? 'Selected' : 'Open'}
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--danger"
+                        disabled={isDeletingId === session.id}
+                        onClick={() => void handleDelete(session)}
+                      >
+                        {isDeletingId === session.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="card">
+          <div className="exercise-page__section-header">
+            <h3>Session details</h3>
+          </div>
+
+          {!selectedSession ? (
+            <p className="exercise-page__state">Sessions are created from the calendar. Pick one from the list to review or edit it here.</p>
+          ) : (
+            <form className="exercise-form" onSubmit={handleSubmit}>
+              <div className="field">
+                <label htmlFor="session-workspace">Workspace</label>
+                <select id="session-workspace" value={form.workspaceId} onChange={handleFormChange('workspaceId')}>
+                  <option value="">Choose workspace</option>
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="session-client">Client</label>
+                <select id="session-client" value={form.clientId} onChange={handleFormChange('clientId')}>
+                  <option value="">Choose client</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {formatClientName(client)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="session-start">Start</label>
+                <input id="session-start" type="datetime-local" value={form.startAtLocal} onChange={handleFormChange('startAtLocal')} />
+              </div>
+
+              <div className="field">
+                <label htmlFor="session-end">End</label>
+                <input id="session-end" type="datetime-local" value={form.endAtLocal} onChange={handleFormChange('endAtLocal')} />
+              </div>
+
+              <div className="field">
+                <label htmlFor="session-status">Status</label>
+                <select id="session-status" value={form.status} onChange={handleFormChange('status')}>
+                  <option value={0}>Planned</option>
+                  <option value={1}>Completed</option>
+                  <option value={2}>Cancelled</option>
+                  <option value={3}>No show</option>
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="session-notes">Notes</label>
+                <textarea id="session-notes" rows={5} value={form.notes} onChange={handleFormChange('notes')} />
+              </div>
+
+              <button className="submit-button" type="submit" disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save changes'}
+              </button>
+            </form>
+          )}
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function CalendarPage() {
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const navigate = useNavigate();
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedDay, setSelectedDay] = useState<Date>(today);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [createForm, setCreateForm] = useState({
+    workspaceId: '',
+    clientId: '',
+    startAtLocal: combineDayAndTime(today, '09:00'),
+    endAtLocal: combineDayAndTime(today, '10:00'),
+    notes: '',
+  });
+
+  const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
+  const workspaceById = useMemo(() => new Map(workspaces.map((workspace) => [workspace.id, workspace])), [workspaces]);
+
+  const loadCalendar = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+      ]);
+
+      setSessions(nextSessions);
+      setClients(nextClients);
+      setWorkspaces(nextWorkspaces);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiBaseUrl, authenticatedFetch]);
+
+  useEffect(() => {
+    void loadCalendar();
+  }, [loadCalendar]);
+
+  useEffect(() => {
+    setCreateForm((current) => ({
+      ...current,
+      startAtLocal: combineDayAndTime(selectedDay, extractTime(current.startAtLocal) ?? '09:00'),
+      endAtLocal: combineDayAndTime(selectedDay, extractTime(current.endAtLocal) ?? '10:00'),
+    }));
+  }, [selectedDay]);
+
+  const monthDays = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
+
+  const sessionsByDay = useMemo(() => {
+    const map = new Map<string, Session[]>();
+
+    for (const session of sessions) {
+      const key = toDayKey(new Date(session.startAtUtc));
+      const items = map.get(key) ?? [];
+      items.push(session);
+      map.set(key, items);
+    }
+
+    for (const items of map.values()) {
+      items.sort((left, right) => new Date(left.startAtUtc).getTime() - new Date(right.startAtUtc).getTime());
+    }
+
+    return map;
+  }, [sessions]);
+
+  const selectedDayKey = toDayKey(selectedDay);
+  const selectedDaySessions = useMemo(
+    () => sessionsByDay.get(selectedDayKey) ?? [],
+    [selectedDayKey, sessionsByDay],
+  );
+
+  const changeCreateField =
+    (field: keyof typeof createForm) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      setCreateForm((current) => ({
+        ...current,
+        [field]: event.target.value,
+      }));
+    };
+
+  const moveMonth = (offset: number) => {
+    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  };
+
+  const handlePickDay = (day: Date) => {
+    const normalized = startOfDay(day);
+    setSelectedDay(normalized);
+    if (
+      normalized.getFullYear() !== visibleMonth.getFullYear() ||
+      normalized.getMonth() !== visibleMonth.getMonth()
+    ) {
+      setVisibleMonth(new Date(normalized.getFullYear(), normalized.getMonth(), 1));
+    }
+  };
+
+  const handleCreateSession = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!createForm.workspaceId || !createForm.clientId || !createForm.startAtLocal || !createForm.endAtLocal) {
+      setErrorMessage('Workspace, client, start time, and end time are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage('');
+
+    try {
+      await sendJson(
+        `${apiBaseUrl}/sessions`,
+        'POST',
+        authenticatedFetch,
+        {
+          workspaceId: createForm.workspaceId,
+          clientId: createForm.clientId,
+          notes: createForm.notes.trim() || null,
+          startAtUtc: new Date(createForm.startAtLocal).toISOString(),
+          endAtUtc: new Date(createForm.endAtLocal).toISOString(),
+        },
+        'Failed to create session.',
+      );
+
+      setCreateForm((current) => ({
+        ...current,
+        notes: '',
+      }));
+      await loadCalendar();
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section className="calendar-page">
+      <div className="exercise-page__header">
+        <div>
+          <p className="feature-page__eyebrow">Calendar</p>
+          <h2>Calendar</h2>
+          <p>Plan the month, open a day, and keep parallel sessions visible instead of forcing a single-slot view.</p>
+        </div>
+      </div>
+
+      {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
+
+      <div className="calendar-page__grid">
+        <section className="card calendar-board">
+          <div className="calendar-board__header">
+            <button type="button" className="button button--secondary" onClick={() => moveMonth(-1)}>
+              Prev
+            </button>
+            <div className="calendar-board__title">
+              <h3>{visibleMonth.toLocaleDateString([], { month: 'long', year: 'numeric' })}</h3>
+              <p>{sessionsByDay.size} active day entries</p>
+            </div>
+            <button type="button" className="button button--secondary" onClick={() => moveMonth(1)}>
+              Next
+            </button>
+          </div>
+
+          <div className="calendar-board__weekdays">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
+
+          <div className="calendar-board__days">
+            {monthDays.map((day) => {
+              const dayKey = toDayKey(day);
+              const daySessions = sessionsByDay.get(dayKey) ?? [];
+              const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
+              const isToday = dayKey === toDayKey(today);
+              const isSelected = dayKey === selectedDayKey;
+
+              return (
+                <button
+                  type="button"
+                  key={dayKey}
+                  className={`calendar-day${isCurrentMonth ? '' : ' is-outside'}${isToday ? ' is-today' : ''}${isSelected ? ' is-selected' : ''}`}
+                  onClick={() => handlePickDay(day)}
+                >
+                  <span className="calendar-day__number">{day.getDate()}</span>
+                  <div className="calendar-day__items">
+                    {daySessions.slice(0, 3).map((session) => {
+                      const workspace = workspaceById.get(session.workspaceId);
+                      const client = clientById.get(session.clientId);
+
+                      return (
+                        <span key={session.id} className={`calendar-chip calendar-chip--${session.status}`}>
+                          <strong>{formatTimeShort(session.startAtUtc)}</strong>
+                          <span>{client ? formatClientName(client) : workspace?.name ?? 'Session'}</span>
+                        </span>
+                      );
+                    })}
+                    {daySessions.length > 3 ? (
+                      <span className="calendar-day__more">+{daySessions.length - 3} more</span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="card calendar-day-panel">
+          <div className="exercise-page__section-header">
+            <h3>{selectedDay.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+            <span className="exercise-page__count">{selectedDaySessions.length}</span>
+          </div>
+
+          <div className="calendar-day-panel__stack">
+            <section>
+              <p className="calendar-day-panel__caption">Sessions</p>
+              {isLoading ? <p className="exercise-page__state">Loading sessions...</p> : null}
+              {!isLoading && selectedDaySessions.length === 0 ? (
+                <p className="exercise-page__state">No sessions yet. Create the first one for this day below.</p>
+              ) : null}
+              {!isLoading && selectedDaySessions.length > 0 ? (
+                <div className="exercise-list">
+                  {selectedDaySessions.map((session) => {
+                    const workspace = workspaceById.get(session.workspaceId);
+                    const client = clientById.get(session.clientId);
+
+                    return (
+                      <article key={session.id} className="exercise-item">
+                        <div className="exercise-item__content">
+                          <div className="exercise-item__title-row">
+                            <h4>{client ? formatClientName(client) : 'Unknown client'}</h4>
+                            <span className={`exercise-item__tag calendar-status-tag calendar-status-tag--${session.status}`}>
+                              {sessionStatusLabel(session.status)}
+                            </span>
+                          </div>
+                          <div className="client-item__meta">
+                            <span>{workspace?.name ?? 'Unknown workspace'}</span>
+                            <span>{formatSessionWindow(session.startAtUtc, session.endAtUtc)}</span>
+                          </div>
+                          {session.notes ? <p>{session.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
+                        </div>
+                        <div className="exercise-item__actions">
+                          <button type="button" className="button button--secondary" onClick={() => navigate('/sessions')}>
+                            Manage
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+
+            <section>
+              <p className="calendar-day-panel__caption">Add session</p>
+              <form className="exercise-form" onSubmit={handleCreateSession}>
+                <div className="field">
+                  <label htmlFor="calendar-workspace">Workspace</label>
+                  <select id="calendar-workspace" value={createForm.workspaceId} onChange={changeCreateField('workspaceId')}>
+                    <option value="">Choose workspace</option>
+                    {workspaces.map((workspace) => (
+                      <option key={workspace.id} value={workspace.id}>
+                        {workspace.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="calendar-client">Client</label>
+                  <select id="calendar-client" value={createForm.clientId} onChange={changeCreateField('clientId')}>
+                    <option value="">Choose client</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {formatClientName(client)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="calendar-form__times">
+                  <div className="field">
+                    <label htmlFor="calendar-start">Start</label>
+                    <input id="calendar-start" type="datetime-local" value={createForm.startAtLocal} onChange={changeCreateField('startAtLocal')} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="calendar-end">End</label>
+                    <input id="calendar-end" type="datetime-local" value={createForm.endAtLocal} onChange={changeCreateField('endAtLocal')} />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="calendar-notes">Notes</label>
+                  <textarea id="calendar-notes" rows={4} value={createForm.notes} onChange={changeCreateField('notes')} />
+                </div>
+
+                <button className="submit-button" type="submit" disabled={isSaving}>
+                  {isSaving ? 'Creating...' : 'Add session'}
+                </button>
+              </form>
+            </section>
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
 function FeaturePage(props: {
   eyebrow: string;
   title: string;
@@ -1417,6 +2083,23 @@ async function sendJson<TResponse>(
   return (await response.json()) as TResponse;
 }
 
+async function sendPatch(
+  url: string,
+  authenticatedFetch: AuthenticatedFetch,
+  payload: unknown,
+  fallbackMessage: string,
+): Promise<void> {
+  const response = await authenticatedFetch(url, {
+    method: 'PATCH',
+    headers: createAuthHeaders(undefined, true),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    await readError(response, fallbackMessage);
+  }
+}
+
 async function sendVoid(
   url: string,
   method: 'DELETE',
@@ -1430,6 +2113,88 @@ async function sendVoid(
   if (!response.ok) {
     await readError(response, fallbackMessage);
   }
+}
+
+function sessionStatusLabel(status: SessionStatus): string {
+  switch (status) {
+    case 0:
+      return 'Planned';
+    case 1:
+      return 'Completed';
+    case 2:
+      return 'Cancelled';
+    case 3:
+      return 'No show';
+    default:
+      return 'Unknown';
+  }
+}
+
+function formatSessionWindow(startAtUtc: string, endAtUtc: string): string {
+  const start = new Date(startAtUtc);
+  const end = new Date(endAtUtc);
+
+  return `${start.toLocaleString()} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function toDateTimeLocalValue(value: string): string {
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+function emptyClient(id: string): Client {
+  return {
+    id,
+    firstName: 'Unknown',
+    lastName: 'client',
+    phone: null,
+    email: null,
+    notes: null,
+  };
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function toDayKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function buildMonthGrid(month: Date): Date[] {
+  const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
+  const offset = (firstOfMonth.getDay() + 6) % 7;
+  const gridStart = new Date(firstOfMonth);
+  gridStart.setDate(firstOfMonth.getDate() - offset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(gridStart);
+    day.setDate(gridStart.getDate() + index);
+    return day;
+  });
+}
+
+function combineDayAndTime(day: Date, time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const value = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes, 0, 0);
+  return toDateTimeLocalValue(value.toISOString());
+}
+
+function extractTime(value: string): string | null {
+  if (!value.includes('T')) {
+    return null;
+  }
+
+  return value.slice(11, 16);
+}
+
+function formatTimeShort(value: string): string {
+  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export default App;
