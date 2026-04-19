@@ -23,6 +23,7 @@ public sealed class ApplicationDbContext
     public DbSet<WorkspaceClient> WorkspaceClients => Set<WorkspaceClient>();
     public DbSet<SessionExercise> SessionExercises => Set<SessionExercise>();
     public DbSet<SessionExerciseSet> SessionExerciseSets => Set<SessionExerciseSet>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

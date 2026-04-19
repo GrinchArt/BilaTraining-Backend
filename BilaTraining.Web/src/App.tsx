@@ -17,7 +17,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 
-import { useAuth } from './auth';
+import { useAuth, type AuthenticatedFetch } from './auth';
 
 type AuthError = {
   status?: number;
@@ -488,7 +488,7 @@ function RegisterPage() {
 }
 
 function ClientsPage() {
-  const { apiBaseUrl, session } = useAuth();
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -512,7 +512,7 @@ function ClientsPage() {
       const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
       const data = await getJson<Client[]>(
         `${apiBaseUrl}/clients${query}`,
-        session?.accessToken,
+        authenticatedFetch,
         'Failed to load clients.',
       );
 
@@ -522,7 +522,7 @@ function ClientsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, search, session?.accessToken]);
+  }, [apiBaseUrl, authenticatedFetch, search]);
 
   useEffect(() => {
     void loadClients();
@@ -584,7 +584,7 @@ function ClientsPage() {
         await sendJson(
           `${apiBaseUrl}/clients/${editingId}`,
           'PUT',
-          session?.accessToken,
+          authenticatedFetch,
           payload,
           'Failed to update client.',
         );
@@ -592,7 +592,7 @@ function ClientsPage() {
         await sendJson(
           `${apiBaseUrl}/clients`,
           'POST',
-          session?.accessToken,
+          authenticatedFetch,
           payload,
           'Failed to create client.',
         );
@@ -612,12 +612,12 @@ function ClientsPage() {
     setErrorMessage('');
 
     try {
-      await sendVoid(
-        `${apiBaseUrl}/clients/${client.id}`,
-        'DELETE',
-        session?.accessToken,
-        'Failed to delete client.',
-      );
+        await sendVoid(
+          `${apiBaseUrl}/clients/${client.id}`,
+          'DELETE',
+          authenticatedFetch,
+          'Failed to delete client.',
+        );
 
       if (editingId === client.id) {
         resetForm();
@@ -765,7 +765,7 @@ function ClientsPage() {
 }
 
 function WorkspacesPage() {
-  const { apiBaseUrl, session } = useAuth();
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -786,7 +786,7 @@ function WorkspacesPage() {
     try {
       const data = await getJson<Workspace[]>(
         `${apiBaseUrl}/workspaces`,
-        session?.accessToken,
+        authenticatedFetch,
         'Failed to load workspaces.',
       );
 
@@ -796,7 +796,7 @@ function WorkspacesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, session?.accessToken]);
+  }, [apiBaseUrl, authenticatedFetch]);
 
   useEffect(() => {
     void loadWorkspaces();
@@ -862,7 +862,7 @@ function WorkspacesPage() {
         await sendJson(
           `${apiBaseUrl}/workspaces/${editingId}`,
           'PUT',
-          session?.accessToken,
+          authenticatedFetch,
           payload,
           'Failed to update workspace.',
         );
@@ -870,7 +870,7 @@ function WorkspacesPage() {
         await sendJson(
           `${apiBaseUrl}/workspaces`,
           'POST',
-          session?.accessToken,
+          authenticatedFetch,
           payload,
           'Failed to create workspace.',
         );
@@ -890,12 +890,12 @@ function WorkspacesPage() {
     setErrorMessage('');
 
     try {
-      await sendVoid(
-        `${apiBaseUrl}/workspaces/${workspace.id}`,
-        'DELETE',
-        session?.accessToken,
-        'Failed to delete workspace.',
-      );
+        await sendVoid(
+          `${apiBaseUrl}/workspaces/${workspace.id}`,
+          'DELETE',
+          authenticatedFetch,
+          'Failed to delete workspace.',
+        );
 
       if (editingId === workspace.id) {
         resetForm();
@@ -1037,7 +1037,7 @@ function WorkspacesPage() {
 }
 
 function ExercisesPage() {
-  const { apiBaseUrl, session } = useAuth();
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -1059,18 +1059,11 @@ function ExercisesPage() {
       setErrorMessage('');
 
       try {
-        const response = await fetch(`${apiBaseUrl}/exercises`, {
-          headers: {
-            Authorization: `Bearer ${session?.accessToken ?? ''}`,
-          },
-        });
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ message: 'Failed to load exercises.' }));
-          throw { status: response.status, error };
-        }
-
-        const data = (await response.json()) as Exercise[];
+        const data = await getJson<Exercise[]>(
+          `${apiBaseUrl}/exercises`,
+          authenticatedFetch,
+          'Failed to load exercises.',
+        );
 
         if (isMounted) {
           setExercises(data);
@@ -1091,7 +1084,7 @@ function ExercisesPage() {
     return () => {
       isMounted = false;
     };
-  }, [apiBaseUrl, session?.accessToken]);
+  }, [apiBaseUrl, authenticatedFetch]);
 
   const filteredExercises = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
@@ -1148,21 +1141,15 @@ function ExercisesPage() {
       notes: form.notes.trim() || null,
     };
 
-    try {
-      if (editingId) {
-        const response = await fetch(`${apiBaseUrl}/exercises/${editingId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.accessToken ?? ''}`,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ message: 'Failed to update exercise.' }));
-          throw { status: response.status, error };
-        }
+      try {
+        if (editingId) {
+          await sendJson(
+            `${apiBaseUrl}/exercises/${editingId}`,
+            'PUT',
+            authenticatedFetch,
+            payload,
+            'Failed to update exercise.',
+          );
 
         setExercises((current) =>
           current
@@ -1179,23 +1166,19 @@ function ExercisesPage() {
             .sort((left, right) => left.name.localeCompare(right.name)),
         );
       } else {
-        const response = await fetch(`${apiBaseUrl}/exercises`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.accessToken ?? ''}`,
-          },
-          body: JSON.stringify(payload),
-        });
+          const created = await sendJson<Exercise>(
+            `${apiBaseUrl}/exercises`,
+            'POST',
+            authenticatedFetch,
+            payload,
+            'Failed to create exercise.',
+          );
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ message: 'Failed to create exercise.' }));
-          throw { status: response.status, error };
+          if (!created) {
+            throw new Error('Failed to create exercise.');
+          }
+          setExercises((current) => [...current, created].sort((left, right) => left.name.localeCompare(right.name)));
         }
-
-        const created = (await response.json()) as Exercise;
-        setExercises((current) => [...current, created].sort((left, right) => left.name.localeCompare(right.name)));
-      }
 
       resetForm();
     } catch (error) {
@@ -1210,17 +1193,12 @@ function ExercisesPage() {
     setErrorMessage('');
 
     try {
-      const response = await fetch(`${apiBaseUrl}/exercises/${exercise.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${session?.accessToken ?? ''}`,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Failed to delete exercise.' }));
-        throw { status: response.status, error };
-      }
+      await sendVoid(
+        `${apiBaseUrl}/exercises/${exercise.id}`,
+        'DELETE',
+        authenticatedFetch,
+        'Failed to delete exercise.',
+      );
 
       setExercises((current) => current.filter((item) => item.id !== exercise.id));
 
@@ -1405,10 +1383,8 @@ async function readError(response: Response, fallbackMessage: string) {
   throw { status: response.status, error };
 }
 
-async function getJson<T>(url: string, accessToken: string | null | undefined, fallbackMessage: string): Promise<T> {
-  const response = await fetch(url, {
-    headers: createAuthHeaders(accessToken),
-  });
+async function getJson<T>(url: string, authenticatedFetch: AuthenticatedFetch, fallbackMessage: string): Promise<T> {
+  const response = await authenticatedFetch(url);
 
   if (!response.ok) {
     await readError(response, fallbackMessage);
@@ -1420,13 +1396,13 @@ async function getJson<T>(url: string, accessToken: string | null | undefined, f
 async function sendJson<TResponse>(
   url: string,
   method: 'POST' | 'PUT',
-  accessToken: string | null | undefined,
+  authenticatedFetch: AuthenticatedFetch,
   payload: unknown,
   fallbackMessage: string,
 ): Promise<TResponse | null> {
-  const response = await fetch(url, {
+  const response = await authenticatedFetch(url, {
     method,
-    headers: createAuthHeaders(accessToken, true),
+    headers: createAuthHeaders(undefined, true),
     body: JSON.stringify(payload),
   });
 
@@ -1444,12 +1420,11 @@ async function sendJson<TResponse>(
 async function sendVoid(
   url: string,
   method: 'DELETE',
-  accessToken: string | null | undefined,
+  authenticatedFetch: AuthenticatedFetch,
   fallbackMessage: string,
 ): Promise<void> {
-  const response = await fetch(url, {
+  const response = await authenticatedFetch(url, {
     method,
-    headers: createAuthHeaders(accessToken),
   });
 
   if (!response.ok) {
