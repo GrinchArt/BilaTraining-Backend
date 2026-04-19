@@ -1843,7 +1843,7 @@ function CalendarDayPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
   const navigate = useNavigate();
   const { dayKey } = useParams<{ dayKey: string }>();
-  const selectedDay = parseDayKey(dayKey) ?? startOfDay(new Date());
+  const selectedDay = useMemo(() => parseDayKey(dayKey) ?? startOfDay(new Date()), [dayKey]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -1967,7 +1967,7 @@ function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
   const navigate = useNavigate();
   const { dayKey, sessionId } = useParams<{ dayKey: string; sessionId: string }>();
-  const selectedDay = parseDayKey(dayKey) ?? startOfDay(new Date());
+  const selectedDay = useMemo(() => parseDayKey(dayKey) ?? startOfDay(new Date()), [dayKey]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
