@@ -12,13 +12,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:4200",
-                "https://localhost:4200",
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "https://hadley-unrefutable-superrespectably.ngrok-free.dev",
-                "https://bilatraining-front.netlify.app")
+        policy.SetIsOriginAllowed(origin =>
+            origin == "http://localhost:4200" ||
+            origin == "https://localhost:4200" ||
+            origin == "http://localhost:5173" ||
+            origin == "https://localhost:5173" ||
+            origin == "https://hadley-unrefutable-superrespectably.ngrok-free.dev" ||
+            IsNetlifyOrigin(origin))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -76,3 +76,12 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 
 app.Run();
+
+static bool IsNetlifyOrigin(string origin)
+{
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        return false;
+
+    return uri.Scheme == Uri.UriSchemeHttps &&
+           uri.Host.EndsWith(".netlify.app", StringComparison.OrdinalIgnoreCase);
+}

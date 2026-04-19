@@ -641,6 +641,7 @@ a {
   color: var(--text);
   text-align: left;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  overflow: hidden;
 }
 
 .calendar-day.is-outside {
@@ -668,6 +669,7 @@ a {
   gap: 4px;
   min-width: 0;
   align-content: start;
+  overflow: hidden;
 }
 
 .calendar-chip {
@@ -811,8 +813,23 @@ a {
   }
 
   .calendar-chip {
-    min-height: 22px;
-    padding: 2px 5px;
+    min-height: 6px;
+    height: 6px;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 0;
+  }
+
+  .calendar-chip strong,
+  .calendar-chip span {
+    display: none;
+  }
+
+  .calendar-day__items {
+    gap: 3px;
+  }
+
+  .calendar-day__more {
     font-size: 10px;
   }
 }
