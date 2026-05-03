@@ -441,6 +441,10 @@ a {
   gap: 16px;
 }
 
+.exercise-page__grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .exercise-page__section-header {
   display: flex;
   align-items: center;
@@ -763,6 +767,10 @@ a {
 @media (min-width: 900px) {
   .exercise-page__grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  }
+
+  .exercise-page__grid--single {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .calendar-page__grid {

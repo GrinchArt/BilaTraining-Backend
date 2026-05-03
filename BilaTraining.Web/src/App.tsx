@@ -7,10 +7,10 @@ import { useAuth } from './auth';
 import { CalendarDayPage as CalendarDayRoutePage } from './features/calendar/CalendarDayPage';
 import { CalendarPage as CalendarRoutePage } from './features/calendar/CalendarPage';
 import { CalendarSessionFormPage as CalendarSessionRoutePage } from './features/calendar/CalendarSessionFormPage';
-import { ClientsPage as ClientsRoutePage } from './features/clients/ClientsPage';
-import { ExercisesPage as ExercisesRoutePage } from './features/exercises/ExercisesPage';
-import { SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
-import { WorkspacesPage as WorkspacesRoutePage } from './features/workspaces/WorkspacesPage';
+import { ClientFormPage, ClientsPage as ClientsRoutePage } from './features/clients/ClientsPage';
+import { ExerciseFormPage, ExercisesPage as ExercisesRoutePage } from './features/exercises/ExercisesPage';
+import { SessionFormPage, SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
+import { WorkspaceFormPage, WorkspacesPage as WorkspacesRoutePage } from './features/workspaces/WorkspacesPage';
 import { toMessage } from './shared/api';
 
 function App() {
@@ -43,10 +43,42 @@ function App() {
           }
         />
         <Route
+          path="clients/new"
+          element={
+            <ProtectedRoute>
+              <ClientFormPage mode="create" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="clients/:clientId/edit"
+          element={
+            <ProtectedRoute>
+              <ClientFormPage mode="edit" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="workspaces"
           element={
             <ProtectedRoute>
               <WorkspacesRoutePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="workspaces/new"
+          element={
+            <ProtectedRoute>
+              <WorkspaceFormPage mode="create" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="workspaces/:workspaceId/edit"
+          element={
+            <ProtectedRoute>
+              <WorkspaceFormPage mode="edit" />
             </ProtectedRoute>
           }
         />
@@ -59,10 +91,42 @@ function App() {
           }
         />
         <Route
+          path="exercises/new"
+          element={
+            <ProtectedRoute>
+              <ExerciseFormPage mode="create" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="exercises/:exerciseId/edit"
+          element={
+            <ProtectedRoute>
+              <ExerciseFormPage mode="edit" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="sessions"
           element={
             <ProtectedRoute>
               <SessionsRoutePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sessions/new"
+          element={
+            <ProtectedRoute>
+              <SessionFormPage mode="create" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sessions/:sessionId/edit"
+          element={
+            <ProtectedRoute>
+              <SessionFormPage mode="edit" />
             </ProtectedRoute>
           }
         />

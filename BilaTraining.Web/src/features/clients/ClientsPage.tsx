@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
 import { getJson, sendJson, sendVoid, toMessage } from '../../shared/api';
@@ -13,22 +14,22 @@ type ClientFormState = {
   notes: string;
 };
 
+const emptyForm: ClientFormState = {
+  firstName: '',
+  lastName: '',
+  phone: '',
+  email: '',
+  notes: '',
+};
+
 export function ClientsPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ClientFormState>({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    notes: '',
-  });
 
   const loadClients = useCallback(async () => {
     setIsLoading(true);
@@ -49,84 +50,12 @@ export function ClientsPage() {
     void loadClients();
   }, [loadClients]);
 
-  const resetForm = () => {
-    setEditingId(null);
-    setForm({
-      firstName: '',
-      lastName: '',
-      phone: '',
-      email: '',
-      notes: '',
-    });
-  };
-
-  const handleChange =
-    (field: keyof ClientFormState) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((current) => ({
-        ...current,
-        [field]: event.target.value,
-      }));
-    };
-
-  const handleEdit = (client: Client) => {
-    setEditingId(client.id);
-    setErrorMessage('');
-    setForm({
-      firstName: client.firstName,
-      lastName: client.lastName ?? '',
-      phone: client.phone ?? '',
-      email: client.email ?? '',
-      notes: client.notes ?? '',
-    });
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!form.firstName.trim()) {
-      setErrorMessage('First name is required.');
-      return;
-    }
-
-    setIsSaving(true);
-    setErrorMessage('');
-
-    const payload = {
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim() || null,
-      phone: form.phone.trim() || null,
-      email: form.email.trim() || null,
-      notes: form.notes.trim() || null,
-    };
-
-    try {
-      if (editingId) {
-        await sendJson(`${apiBaseUrl}/clients/${editingId}`, 'PUT', authenticatedFetch, payload, 'Failed to update client.');
-      } else {
-        await sendJson(`${apiBaseUrl}/clients`, 'POST', authenticatedFetch, payload, 'Failed to create client.');
-      }
-
-      resetForm();
-      await loadClients();
-    } catch (error) {
-      setErrorMessage(toMessage(error));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleDelete = async (client: Client) => {
     setIsDeletingId(client.id);
     setErrorMessage('');
 
     try {
       await sendVoid(`${apiBaseUrl}/clients/${client.id}`, 'DELETE', authenticatedFetch, 'Failed to delete client.');
-
-      if (editingId === client.id) {
-        resetForm();
-      }
-
       await loadClients();
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -141,55 +70,18 @@ export function ClientsPage() {
         <div>
           <p className="feature-page__eyebrow">Clients</p>
           <h2>Clients</h2>
-          <p>Add clients, update their contact details, and filter the list when you are working from a phone.</p>
+          <p>Browse clients first, then open a dedicated screen to create or edit contact details.</p>
+        </div>
+        <div className="calendar-toolbar">
+          <button type="button" className="button" aria-label="Add client" onClick={() => navigate('/clients/new')}>
+            +
+          </button>
         </div>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
-      <div className="exercise-page__grid">
-        <section className="card">
-          <div className="exercise-page__section-header">
-            <h3>{editingId ? 'Edit client' : 'Add client'}</h3>
-            {editingId ? (
-              <button type="button" className="button button--secondary" onClick={resetForm}>
-                Cancel
-              </button>
-            ) : null}
-          </div>
-
-          <form className="exercise-form" onSubmit={handleSubmit}>
-            <div className="field">
-              <label htmlFor="client-firstName">First name</label>
-              <input id="client-firstName" type="text" value={form.firstName} onChange={handleChange('firstName')} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="client-lastName">Last name</label>
-              <input id="client-lastName" type="text" value={form.lastName} onChange={handleChange('lastName')} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="client-phone">Phone</label>
-              <input id="client-phone" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={handleChange('phone')} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="client-email">Email</label>
-              <input id="client-email" type="email" autoComplete="email" value={form.email} onChange={handleChange('email')} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="client-notes">Notes</label>
-              <textarea id="client-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
-            </div>
-
-            <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : editingId ? 'Save changes' : 'Add client'}
-            </button>
-          </form>
-        </section>
-
+      <div className="exercise-page__grid exercise-page__grid--single">
         <section className="card">
           <div className="exercise-page__section-header">
             <h3>Client list</h3>
@@ -223,7 +115,7 @@ export function ClientsPage() {
                   </div>
 
                   <div className="exercise-item__actions">
-                    <button type="button" className="button button--secondary" onClick={() => handleEdit(client)}>
+                    <button type="button" className="button button--secondary" onClick={() => navigate(`/clients/${client.id}/edit`)}>
                       Edit
                     </button>
                     <button type="button" className="button button--danger" disabled={isDeletingId === client.id} onClick={() => void handleDelete(client)}>
@@ -236,6 +128,164 @@ export function ClientsPage() {
           ) : null}
         </section>
       </div>
+    </section>
+  );
+}
+
+export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
+  const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const navigate = useNavigate();
+  const { clientId } = useParams<{ clientId: string }>();
+  const [form, setForm] = useState<ClientFormState>(emptyForm);
+  const [isLoading, setIsLoading] = useState(mode === 'edit');
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (mode !== 'edit') {
+      setForm(emptyForm);
+      return;
+    }
+
+    let isActive = true;
+
+    const loadClient = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+
+      try {
+        const clients = await getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.');
+
+        if (!isActive) {
+          return;
+        }
+
+        const client = clients.find((item) => item.id === clientId);
+
+        if (!client) {
+          setErrorMessage('Client not found.');
+          return;
+        }
+
+        setForm({
+          firstName: client.firstName,
+          lastName: client.lastName ?? '',
+          phone: client.phone ?? '',
+          email: client.email ?? '',
+          notes: client.notes ?? '',
+        });
+      } catch (error) {
+        if (isActive) {
+          setErrorMessage(toMessage(error));
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadClient();
+
+    return () => {
+      isActive = false;
+    };
+  }, [apiBaseUrl, authenticatedFetch, clientId, mode]);
+
+  const handleChange =
+    (field: keyof ClientFormState) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setForm((current) => ({
+        ...current,
+        [field]: event.target.value,
+      }));
+    };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!form.firstName.trim()) {
+      setErrorMessage('First name is required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage('');
+
+    const payload = {
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim() || null,
+      phone: form.phone.trim() || null,
+      email: form.email.trim() || null,
+      notes: form.notes.trim() || null,
+    };
+
+    try {
+      if (mode === 'edit' && clientId) {
+        await sendJson(`${apiBaseUrl}/clients/${clientId}`, 'PUT', authenticatedFetch, payload, 'Failed to update client.');
+      } else {
+        await sendJson(`${apiBaseUrl}/clients`, 'POST', authenticatedFetch, payload, 'Failed to create client.');
+      }
+
+      navigate('/clients');
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section className="exercise-page">
+      <div className="exercise-page__header">
+        <div>
+          <p className="feature-page__eyebrow">Clients</p>
+          <h2>{mode === 'edit' ? 'Edit client' : 'Add client'}</h2>
+          <p>{mode === 'edit' ? 'Update client details on a separate page.' : 'Create a new client on a dedicated page.'}</p>
+        </div>
+        <button type="button" className="button button--secondary" onClick={() => navigate('/clients')}>
+          Back
+        </button>
+      </div>
+
+      {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
+
+      <section className="card calendar-day-panel">
+        {isLoading ? (
+          <p className="exercise-page__state">Loading form...</p>
+        ) : (
+          <form className="exercise-form" onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="client-firstName">First name</label>
+              <input id="client-firstName" type="text" value={form.firstName} onChange={handleChange('firstName')} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="client-lastName">Last name</label>
+              <input id="client-lastName" type="text" value={form.lastName} onChange={handleChange('lastName')} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="client-phone">Phone</label>
+              <input id="client-phone" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={handleChange('phone')} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="client-email">Email</label>
+              <input id="client-email" type="email" autoComplete="email" value={form.email} onChange={handleChange('email')} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="client-notes">Notes</label>
+              <textarea id="client-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
+            </div>
+
+            <button className="submit-button" type="submit" disabled={isSaving}>
+              {isSaving ? 'Saving...' : mode === 'edit' ? 'Save changes' : 'Add client'}
+            </button>
+          </form>
+        )}
+      </section>
     </section>
   );
 }
