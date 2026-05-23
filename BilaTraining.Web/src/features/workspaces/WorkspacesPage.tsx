@@ -137,7 +137,6 @@ export function WorkspacesPage() {
             <div className="data-table data-table--workspaces">
               <div className="data-table__header" aria-hidden="true">
                 <span>{t('common.workspace')}</span>
-                <span>{t('common.color')}</span>
                 <span>{t('common.description')}</span>
                 <span></span>
               </div>
@@ -148,9 +147,6 @@ export function WorkspacesPage() {
                       <span className="workspace-item__swatch" style={{ backgroundColor: normalizeColorHex(workspace.colorHex) }} aria-hidden="true"></span>
                       <strong>{workspace.name}</strong>
                     </div>
-                  </div>
-                  <div className="data-table__cell" data-label={t('common.color')}>
-                    <span className="data-table__mono">{normalizeColorHex(workspace.colorHex)}</span>
                   </div>
                   <div className="data-table__cell" data-label={t('common.description')}>
                     <span className={workspace.description ? undefined : 'exercise-item__muted'}>{workspace.description ?? t('common.noDescription')}</span>

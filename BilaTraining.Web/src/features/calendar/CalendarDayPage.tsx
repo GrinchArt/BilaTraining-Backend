@@ -11,6 +11,12 @@ import { formatTimeShort, parseDayKey, startOfDay, toDayKey } from './calendar.u
 const HOUR_SLOT_HEIGHT = 72;
 const MINUTES_IN_DAY = 24 * 60;
 const DAY_TIMELINE_HEIGHT = 24 * HOUR_SLOT_HEIGHT;
+const MAX_OVERLAP_STACK = 3;
+const OVERLAP_HORIZONTAL_OFFSET = 28;
+const OVERLAP_VERTICAL_OFFSET = 6;
+const OVERLAP_LEFT_PADDING = 4;
+const OVERLAP_RIGHT_PADDING = 10;
+const MIN_SESSION_BLOCK_HEIGHT = 64;
 
 type TimelineSession = {
   session: Session;
@@ -192,7 +198,6 @@ export function CalendarDayPage() {
         <div>
           <p className="feature-page__eyebrow">{t('calendar.dayEyebrow')}</p>
           <h2>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
-          <p>{t('calendar.dayDescription')}</p>
         </div>
         <div className="calendar-toolbar">
           <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
@@ -214,10 +219,7 @@ export function CalendarDayPage() {
       <div className="calendar-page__grid calendar-page__grid--detail">
         <section className="card calendar-day-panel calendar-day-panel--timeline">
           <div className="exercise-page__section-header">
-            <div>
-              <h3>{t('calendar.sessionsTitle')}</h3>
-              <p className="calendar-day-panel__caption">{t('calendar.sessionsCaption')}</p>
-            </div>
+            <h3>{t('calendar.sessionsTitle')}</h3>
             <span className="exercise-page__count">{selectedDaySessions.length}</span>
           </div>
 
@@ -400,14 +402,16 @@ function buildTimelineSessions(
 
     return laidOut.map((item) => {
       const durationMinutes = item.endMinute - item.startMinute;
-      const overlapOffset = Math.min(item.column, 3) * 18 + 4;
-      const reservedRightSpace = Math.min(maxOverlapColumn, 3) * 18 + 8;
+      const overlapIndex = Math.min(item.column, MAX_OVERLAP_STACK);
+      const overlapOffsetX = overlapIndex * OVERLAP_HORIZONTAL_OFFSET + OVERLAP_LEFT_PADDING;
+      const overlapOffsetY = overlapIndex * OVERLAP_VERTICAL_OFFSET;
+      const reservedRightSpace = Math.min(maxOverlapColumn, MAX_OVERLAP_STACK) * OVERLAP_HORIZONTAL_OFFSET + OVERLAP_RIGHT_PADDING;
 
       return {
         ...item,
-        top: (item.startMinute / 60) * HOUR_SLOT_HEIGHT,
-        height: Math.max((durationMinutes / 60) * HOUR_SLOT_HEIGHT, 56),
-        left: overlapOffset,
+        top: (item.startMinute / 60) * HOUR_SLOT_HEIGHT + overlapOffsetY,
+        height: Math.max((durationMinutes / 60) * HOUR_SLOT_HEIGHT, MIN_SESSION_BLOCK_HEIGHT),
+        left: overlapOffsetX,
         width: reservedRightSpace,
         zIndex: item.column + 1,
       };

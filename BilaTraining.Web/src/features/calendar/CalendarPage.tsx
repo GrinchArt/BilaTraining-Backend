@@ -83,7 +83,6 @@ export function CalendarPage() {
         <div>
           <p className="feature-page__eyebrow">{t('calendar.title')}</p>
           <h2>{t('calendar.title')}</h2>
-          <p>{t('calendar.description')}</p>
         </div>
       </div>
 
