@@ -32,3 +32,44 @@ export type Session = {
   endAtUtc: string;
   status: SessionStatus;
 };
+
+export type ReportPeriod = 'week' | 'month';
+
+export type SessionOverviewPeriod = {
+  period: ReportPeriod;
+  anchorDate: string;
+  startDate: string;
+  endDate: string;
+  previousAnchorDate: string;
+  nextAnchorDate: string;
+  timeZone: string;
+};
+
+export type SessionOverviewSummary = {
+  total: number;
+  planned: number;
+  completed: number;
+  cancelled: number;
+  noShow: number;
+};
+
+export type SessionOverviewStatus = {
+  status: SessionStatus;
+  count: number;
+};
+
+export type SessionOverviewTimelinePoint = {
+  date: string;
+  total: number;
+  planned: number;
+  completed: number;
+  cancelled: number;
+  noShow: number;
+};
+
+export type SessionOverviewReport = {
+  period: SessionOverviewPeriod;
+  summary: SessionOverviewSummary;
+  byStatus: SessionOverviewStatus[];
+  timeline: SessionOverviewTimelinePoint[];
+};

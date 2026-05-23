@@ -27,8 +27,8 @@ export function AppShell() {
         { to: '/clients', label: 'Clients' },
         { to: '/workspaces', label: 'Workspaces' },
         { to: '/exercises', label: 'Exercises' },
-        { to: '/sessions', label: 'Sessions' },
         { to: '/calendar', label: 'Calendar' },
+        { to: '/reports', label: 'Reports' },
       ]
     : [
         { to: '/auth/login', label: 'Login' },
@@ -61,21 +61,6 @@ export function AppShell() {
             <h1>Coach Dashboard</h1>
           </div>
         </div>
-
-        <div className="shell__profile">
-          {isAuthenticated ? (
-            <>
-              <p className="shell__identity">
-                <strong>{identityLabel}</strong>
-              </p>
-              <button type="button" className="shell__logout" onClick={handleLogout}>
-                Log out
-              </button>
-            </>
-          ) : (
-            <p className="shell__identity">Not signed in yet</p>
-          )}
-        </div>
       </header>
 
       <aside id="primary-menu" className={`shell__drawer${menuOpen ? ' is-open' : ''}`}>
@@ -93,6 +78,21 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
+
+          <div className="shell__drawer-footer">
+            {isAuthenticated ? (
+              <div className="shell__profile">
+                <p className="shell__identity">
+                  <strong>{identityLabel}</strong>
+                </p>
+                <button type="button" className="shell__logout" onClick={handleLogout}>
+                  Log out
+                </button>
+              </div>
+            ) : (
+              <p className="shell__identity">Not signed in yet</p>
+            )}
+          </div>
         </div>
       </aside>
 

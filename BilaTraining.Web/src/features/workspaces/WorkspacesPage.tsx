@@ -25,6 +25,7 @@ export function WorkspacesPage() {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const loadWorkspaces = useCallback(async () => {
@@ -45,6 +46,35 @@ export function WorkspacesPage() {
     void loadWorkspaces();
   }, [loadWorkspaces]);
 
+  useEffect(() => {
+    if (!openMenuId) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest('.data-table__menu')) {
+        return;
+      }
+
+      setOpenMenuId(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenMenuId(null);
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuId]);
+
   const filteredWorkspaces = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -56,6 +86,7 @@ export function WorkspacesPage() {
 
   const handleDelete = async (workspace: Workspace) => {
     setIsDeletingId(workspace.id);
+    setOpenMenuId(null);
     setErrorMessage('');
 
     try {
@@ -102,24 +133,56 @@ export function WorkspacesPage() {
             <p className="exercise-page__state">{workspaces.length === 0 ? 'No workspaces yet.' : 'No workspaces match the current search.'}</p>
           ) : null}
           {!isLoading && filteredWorkspaces.length > 0 ? (
-            <div className="exercise-list">
+            <div className="data-table data-table--workspaces">
+              <div className="data-table__header" aria-hidden="true">
+                <span>Workspace</span>
+                <span>Color</span>
+                <span>Description</span>
+                <span></span>
+              </div>
               {filteredWorkspaces.map((workspace) => (
-                <article key={workspace.id} className="exercise-item">
-                  <div className="exercise-item__content">
-                    <div className="exercise-item__title-row">
+                <article key={workspace.id} className="data-table__row">
+                  <div className="data-table__cell" data-label="Workspace">
+                    <div className="data-table__primary">
                       <span className="workspace-item__swatch" style={{ backgroundColor: normalizeColorHex(workspace.colorHex) }} aria-hidden="true"></span>
-                      <h4>{workspace.name}</h4>
+                      <strong>{workspace.name}</strong>
                     </div>
-                    {workspace.description ? <p>{workspace.description}</p> : <p className="exercise-item__muted">No description.</p>}
                   </div>
-
-                  <div className="exercise-item__actions">
-                    <button type="button" className="button button--secondary" onClick={() => navigate(`/workspaces/${workspace.id}/edit`)}>
-                      Edit
-                    </button>
-                    <button type="button" className="button button--danger" disabled={isDeletingId === workspace.id} onClick={() => void handleDelete(workspace)}>
-                      {isDeletingId === workspace.id ? 'Deleting...' : 'Delete'}
-                    </button>
+                  <div className="data-table__cell" data-label="Color">
+                    <span className="data-table__mono">{normalizeColorHex(workspace.colorHex)}</span>
+                  </div>
+                  <div className="data-table__cell" data-label="Description">
+                    <span className={workspace.description ? undefined : 'exercise-item__muted'}>{workspace.description ?? 'No description.'}</span>
+                  </div>
+                  <div className="data-table__cell data-table__cell--actions">
+                    <div className="data-table__menu">
+                      <button
+                        type="button"
+                        className="data-table__menu-trigger"
+                        aria-label={`Open actions for ${workspace.name}`}
+                        aria-expanded={openMenuId === workspace.id}
+                        onClick={() => setOpenMenuId((current) => (current === workspace.id ? null : workspace.id))}
+                      >
+                        ...
+                      </button>
+                      {openMenuId === workspace.id ? (
+                        <div className="data-table__menu-popover">
+                          <button
+                            type="button"
+                            className="data-table__menu-item"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              navigate(`/workspaces/${workspace.id}/edit`);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button type="button" className="data-table__menu-item data-table__menu-item--danger" disabled={isDeletingId === workspace.id} onClick={() => void handleDelete(workspace)}>
+                            {isDeletingId === workspace.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               ))}

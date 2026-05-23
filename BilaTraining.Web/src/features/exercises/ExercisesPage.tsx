@@ -24,6 +24,7 @@ export function ExercisesPage() {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const loadExercises = useCallback(async () => {
@@ -44,6 +45,35 @@ export function ExercisesPage() {
     void loadExercises();
   }, [loadExercises]);
 
+  useEffect(() => {
+    if (!openMenuId) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest('.data-table__menu')) {
+        return;
+      }
+
+      setOpenMenuId(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenMenuId(null);
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuId]);
+
   const filteredExercises = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -55,6 +85,7 @@ export function ExercisesPage() {
 
   const handleDelete = async (exercise: Exercise) => {
     setIsDeletingId(exercise.id);
+    setOpenMenuId(null);
     setErrorMessage('');
 
     try {
@@ -101,24 +132,55 @@ export function ExercisesPage() {
             <p className="exercise-page__state">{exercises.length === 0 ? 'No exercises yet.' : 'No exercises match the current search.'}</p>
           ) : null}
           {!isLoading && filteredExercises.length > 0 ? (
-            <div className="exercise-list">
+            <div className="data-table data-table--exercises">
+              <div className="data-table__header" aria-hidden="true">
+                <span>Name</span>
+                <span>Category</span>
+                <span>Notes</span>
+                <span></span>
+              </div>
               {filteredExercises.map((exercise) => (
-                <article key={exercise.id} className="exercise-item">
-                  <div className="exercise-item__content">
-                    <div className="exercise-item__title-row">
-                      <h4>{exercise.name}</h4>
-                      {exercise.category ? <span className="exercise-item__tag">{exercise.category}</span> : null}
+                <article key={exercise.id} className="data-table__row">
+                  <div className="data-table__cell" data-label="Name">
+                    <div className="data-table__primary">
+                      <strong>{exercise.name}</strong>
                     </div>
-                    {exercise.notes ? <p>{exercise.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
                   </div>
-
-                  <div className="exercise-item__actions">
-                    <button type="button" className="button button--secondary" onClick={() => navigate(`/exercises/${exercise.id}/edit`)}>
-                      Edit
-                    </button>
-                    <button type="button" className="button button--danger" disabled={isDeletingId === exercise.id} onClick={() => void handleDelete(exercise)}>
-                      {isDeletingId === exercise.id ? 'Deleting...' : 'Delete'}
-                    </button>
+                  <div className="data-table__cell" data-label="Category">
+                    {exercise.category ? <span className="exercise-item__tag">{exercise.category}</span> : <span className="exercise-item__muted">No category</span>}
+                  </div>
+                  <div className="data-table__cell" data-label="Notes">
+                    <span className={exercise.notes ? undefined : 'exercise-item__muted'}>{exercise.notes ?? 'No notes.'}</span>
+                  </div>
+                  <div className="data-table__cell data-table__cell--actions">
+                    <div className="data-table__menu">
+                      <button
+                        type="button"
+                        className="data-table__menu-trigger"
+                        aria-label={`Open actions for ${exercise.name}`}
+                        aria-expanded={openMenuId === exercise.id}
+                        onClick={() => setOpenMenuId((current) => (current === exercise.id ? null : exercise.id))}
+                      >
+                        ...
+                      </button>
+                      {openMenuId === exercise.id ? (
+                        <div className="data-table__menu-popover">
+                          <button
+                            type="button"
+                            className="data-table__menu-item"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              navigate(`/exercises/${exercise.id}/edit`);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button type="button" className="data-table__menu-item data-table__menu-item--danger" disabled={isDeletingId === exercise.id} onClick={() => void handleDelete(exercise)}>
+                            {isDeletingId === exercise.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               ))}

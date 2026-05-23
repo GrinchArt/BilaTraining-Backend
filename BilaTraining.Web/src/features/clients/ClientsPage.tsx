@@ -29,6 +29,7 @@ export function ClientsPage() {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const loadClients = useCallback(async () => {
@@ -50,8 +51,38 @@ export function ClientsPage() {
     void loadClients();
   }, [loadClients]);
 
+  useEffect(() => {
+    if (!openMenuId) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest('.data-table__menu')) {
+        return;
+      }
+
+      setOpenMenuId(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenMenuId(null);
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuId]);
+
   const handleDelete = async (client: Client) => {
     setIsDeletingId(client.id);
+    setOpenMenuId(null);
     setErrorMessage('');
 
     try {
@@ -98,29 +129,59 @@ export function ClientsPage() {
             <p className="exercise-page__state">{search.trim() ? 'No clients match the current search.' : 'No clients yet.'}</p>
           ) : null}
           {!isLoading && clients.length > 0 ? (
-            <div className="exercise-list">
+            <div className="data-table data-table--clients">
+              <div className="data-table__header" aria-hidden="true">
+                <span>Client</span>
+                <span>Phone</span>
+                <span>Email</span>
+                <span>Notes</span>
+                <span></span>
+              </div>
               {clients.map((client) => (
-                <article key={client.id} className="exercise-item">
-                  <div className="exercise-item__content">
-                    <div className="exercise-item__title-row">
-                      <h4>{formatClientName(client)}</h4>
+                <article key={client.id} className="data-table__row">
+                  <div className="data-table__cell" data-label="Client">
+                    <div className="data-table__primary">
+                      <strong>{formatClientName(client)}</strong>
                     </div>
-
-                    <div className="client-item__meta">
-                      <span>{client.phone ?? 'No phone'}</span>
-                      <span>{client.email ?? 'No email'}</span>
-                    </div>
-
-                    {client.notes ? <p>{client.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
                   </div>
-
-                  <div className="exercise-item__actions">
-                    <button type="button" className="button button--secondary" onClick={() => navigate(`/clients/${client.id}/edit`)}>
-                      Edit
-                    </button>
-                    <button type="button" className="button button--danger" disabled={isDeletingId === client.id} onClick={() => void handleDelete(client)}>
-                      {isDeletingId === client.id ? 'Deleting...' : 'Delete'}
-                    </button>
+                  <div className="data-table__cell" data-label="Phone">
+                    <span className={client.phone ? 'data-table__mono' : 'exercise-item__muted'}>{client.phone ?? 'No phone'}</span>
+                  </div>
+                  <div className="data-table__cell" data-label="Email">
+                    <span>{client.email ?? 'No email'}</span>
+                  </div>
+                  <div className="data-table__cell" data-label="Notes">
+                    <span className={client.notes ? undefined : 'exercise-item__muted'}>{client.notes ?? 'No notes.'}</span>
+                  </div>
+                  <div className="data-table__cell data-table__cell--actions">
+                    <div className="data-table__menu">
+                      <button
+                        type="button"
+                        className="data-table__menu-trigger"
+                        aria-label={`Open actions for ${formatClientName(client)}`}
+                        aria-expanded={openMenuId === client.id}
+                        onClick={() => setOpenMenuId((current) => (current === client.id ? null : client.id))}
+                      >
+                        ...
+                      </button>
+                      {openMenuId === client.id ? (
+                        <div className="data-table__menu-popover">
+                          <button
+                            type="button"
+                            className="data-table__menu-item"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              navigate(`/clients/${client.id}/edit`);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button type="button" className="data-table__menu-item data-table__menu-item--danger" disabled={isDeletingId === client.id} onClick={() => void handleDelete(client)}>
+                            {isDeletingId === client.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               ))}

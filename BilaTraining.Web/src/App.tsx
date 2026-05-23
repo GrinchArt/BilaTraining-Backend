@@ -9,6 +9,7 @@ import { CalendarPage as CalendarRoutePage } from './features/calendar/CalendarP
 import { CalendarSessionFormPage as CalendarSessionRoutePage } from './features/calendar/CalendarSessionFormPage';
 import { ClientFormPage, ClientsPage as ClientsRoutePage } from './features/clients/ClientsPage';
 import { ExerciseFormPage, ExercisesPage as ExercisesRoutePage } from './features/exercises/ExercisesPage';
+import { ReportsPage as ReportsRoutePage } from './features/reports/ReportsPage';
 import { SessionFormPage, SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
 import { WorkspaceFormPage, WorkspacesPage as WorkspacesRoutePage } from './features/workspaces/WorkspacesPage';
 import { toMessage } from './shared/api';
@@ -17,7 +18,7 @@ function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<LandingPage />} />
         <Route
           path="auth/login"
           element={
@@ -162,63 +163,23 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="reports"
+          element={
+            <ProtectedRoute>
+              <ReportsRoutePage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-function HomePage() {
-  const { apiBaseUrl, isAuthenticated, session } = useAuth();
-  const identityLabel = session?.displayName ?? session?.email ?? 'your account';
-
-  return (
-    <>
-      <section className="card">
-        <p className="kicker">Phase 1</p>
-        <h2>React foundation is ready</h2>
-        {isAuthenticated ? (
-          <p>
-            You are signed in as <strong>{identityLabel}</strong>. The next step is connecting your first protected
-            feature screen.
-          </p>
-        ) : (
-          <p>This app is now structured for a mobile-first React frontend with a dedicated API base URL and working auth flow.</p>
-        )}
-      </section>
-
-      <section className="card card--muted">
-        {isAuthenticated ? (
-          <>
-            <h3>Next up</h3>
-            <ul>
-              <li>Connect workspaces or clients against the protected API</li>
-              <li>Handle token expiration and API error states</li>
-              <li>Start replacing placeholder screens with real flows</li>
-            </ul>
-          </>
-        ) : (
-          <>
-            <h3>Try the auth flow</h3>
-            <p>Register a local account or log in with one you already created in the API.</p>
-            <div className="actions">
-              <NavLink to="/auth/register" className="action-link">
-                Create account
-              </NavLink>
-              <NavLink to="/auth/login" className="action-link action-link--secondary">
-                Login
-              </NavLink>
-            </div>
-          </>
-        )}
-      </section>
-
-      <section className="card">
-        <h3>Current API target</h3>
-        <code>{apiBaseUrl}</code>
-      </section>
-    </>
-  );
+function LandingPage() {
+  const { isAuthenticated } = useAuth();
+  return <Navigate to={isAuthenticated ? '/calendar' : '/auth/login'} replace />;
 }
 
 function LoginPage() {
