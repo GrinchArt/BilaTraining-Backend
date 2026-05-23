@@ -12,10 +12,11 @@ const HOUR_SLOT_HEIGHT = 72;
 const MINUTES_IN_DAY = 24 * 60;
 const DAY_TIMELINE_HEIGHT = 24 * HOUR_SLOT_HEIGHT;
 const MAX_OVERLAP_STACK = 3;
-const OVERLAP_HORIZONTAL_OFFSET = 28;
-const OVERLAP_VERTICAL_OFFSET = 6;
+const OVERLAP_HORIZONTAL_OFFSET = 42;
+const OVERLAP_VERTICAL_OFFSET = 12;
 const OVERLAP_LEFT_PADDING = 4;
-const OVERLAP_RIGHT_PADDING = 10;
+const OVERLAP_RIGHT_PADDING = 12;
+const OVERLAP_WIDTH_STEP = 18;
 const MIN_SESSION_BLOCK_HEIGHT = 64;
 
 type TimelineSession = {
@@ -203,14 +204,6 @@ export function CalendarDayPage() {
           <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
             {t('common.back')}
           </button>
-          <button
-            type="button"
-            className="button"
-            aria-label={t('calendar.addSession')}
-            onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/new`)}
-          >
-            +
-          </button>
         </div>
       </div>
 
@@ -274,6 +267,15 @@ export function CalendarDayPage() {
           ) : null}
         </section>
       </div>
+
+      <button
+        type="button"
+        className="calendar-page__fab"
+        aria-label={t('calendar.addSession')}
+        onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/new`)}
+      >
+        +
+      </button>
 
       {activeTimelineSession ? (
         <div className="calendar-session-modal" role="dialog" aria-modal="true" aria-labelledby="calendar-session-modal-title">
@@ -405,7 +407,10 @@ function buildTimelineSessions(
       const overlapIndex = Math.min(item.column, MAX_OVERLAP_STACK);
       const overlapOffsetX = overlapIndex * OVERLAP_HORIZONTAL_OFFSET + OVERLAP_LEFT_PADDING;
       const overlapOffsetY = overlapIndex * OVERLAP_VERTICAL_OFFSET;
-      const reservedRightSpace = Math.min(maxOverlapColumn, MAX_OVERLAP_STACK) * OVERLAP_HORIZONTAL_OFFSET + OVERLAP_RIGHT_PADDING;
+      const reservedRightSpace =
+        Math.min(maxOverlapColumn, MAX_OVERLAP_STACK) * OVERLAP_HORIZONTAL_OFFSET +
+        overlapIndex * OVERLAP_WIDTH_STEP +
+        OVERLAP_RIGHT_PADDING;
 
       return {
         ...item,
