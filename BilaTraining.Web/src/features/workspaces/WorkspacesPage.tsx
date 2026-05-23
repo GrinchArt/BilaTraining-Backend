@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormE
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, sendJson, sendVoid, toMessage } from '../../shared/api';
 import { normalizeColorHex } from '../../shared/color';
 import type { Workspace } from '../../shared/models';
@@ -20,6 +21,7 @@ const emptyForm: WorkspaceFormState = {
 
 export function WorkspacesPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [search, setSearch] = useState('');
@@ -33,14 +35,14 @@ export function WorkspacesPage() {
     setErrorMessage('');
 
     try {
-      const data = await getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.');
+      const data = await getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed'));
       setWorkspaces(data);
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authenticatedFetch]);
+  }, [apiBaseUrl, authenticatedFetch, t]);
 
   useEffect(() => {
     void loadWorkspaces();
@@ -90,7 +92,7 @@ export function WorkspacesPage() {
     setErrorMessage('');
 
     try {
-      await sendVoid(`${apiBaseUrl}/workspaces/${workspace.id}`, 'DELETE', authenticatedFetch, 'Failed to delete workspace.');
+      await sendVoid(`${apiBaseUrl}/workspaces/${workspace.id}`, 'DELETE', authenticatedFetch, t('workspaces.deleteFailed'));
       await loadWorkspaces();
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -103,14 +105,8 @@ export function WorkspacesPage() {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Workspaces</p>
-          <h2>Workspaces</h2>
-          <p>Open a separate screen to add or update a workspace instead of editing inside the list.</p>
-        </div>
-        <div className="calendar-toolbar">
-          <button type="button" className="button" aria-label="Add workspace" onClick={() => navigate('/workspaces/new')}>
-            +
-          </button>
+          <p className="feature-page__eyebrow">{t('nav.workspaces')}</p>
+          <h2>{t('workspaces.title')}</h2>
         </div>
       </div>
 
@@ -119,47 +115,52 @@ export function WorkspacesPage() {
       <div className="exercise-page__grid exercise-page__grid--single">
         <section className="card">
           <div className="exercise-page__section-header">
-            <h3>Workspace list</h3>
-            <span className="exercise-page__count">{filteredWorkspaces.length}</span>
+            <h3>{t('workspaces.list')}</h3>
+            <div className="exercise-page__section-actions">
+              <span className="exercise-page__count">{filteredWorkspaces.length}</span>
+              <button type="button" className="exercise-page__count-button" aria-label={t('workspaces.add')} onClick={() => navigate('/workspaces/new')}>
+                +
+              </button>
+            </div>
           </div>
 
           <div className="field">
-            <label htmlFor="workspace-search">Search by name</label>
-            <input id="workspace-search" type="search" placeholder="Start typing a workspace name" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <label htmlFor="workspace-search">{t('workspaces.searchLabel')}</label>
+            <input id="workspace-search" type="search" placeholder={t('workspaces.searchPlaceholder')} value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
 
-          {isLoading ? <p className="exercise-page__state">Loading workspaces...</p> : null}
+          {isLoading ? <p className="exercise-page__state">{t('workspaces.loading')}</p> : null}
           {!isLoading && filteredWorkspaces.length === 0 ? (
-            <p className="exercise-page__state">{workspaces.length === 0 ? 'No workspaces yet.' : 'No workspaces match the current search.'}</p>
+            <p className="exercise-page__state">{workspaces.length === 0 ? t('workspaces.empty') : t('workspaces.emptySearch')}</p>
           ) : null}
           {!isLoading && filteredWorkspaces.length > 0 ? (
             <div className="data-table data-table--workspaces">
               <div className="data-table__header" aria-hidden="true">
-                <span>Workspace</span>
-                <span>Color</span>
-                <span>Description</span>
+                <span>{t('common.workspace')}</span>
+                <span>{t('common.color')}</span>
+                <span>{t('common.description')}</span>
                 <span></span>
               </div>
               {filteredWorkspaces.map((workspace) => (
                 <article key={workspace.id} className="data-table__row">
-                  <div className="data-table__cell" data-label="Workspace">
+                  <div className="data-table__cell" data-label={t('common.workspace')}>
                     <div className="data-table__primary">
                       <span className="workspace-item__swatch" style={{ backgroundColor: normalizeColorHex(workspace.colorHex) }} aria-hidden="true"></span>
                       <strong>{workspace.name}</strong>
                     </div>
                   </div>
-                  <div className="data-table__cell" data-label="Color">
+                  <div className="data-table__cell" data-label={t('common.color')}>
                     <span className="data-table__mono">{normalizeColorHex(workspace.colorHex)}</span>
                   </div>
-                  <div className="data-table__cell" data-label="Description">
-                    <span className={workspace.description ? undefined : 'exercise-item__muted'}>{workspace.description ?? 'No description.'}</span>
+                  <div className="data-table__cell" data-label={t('common.description')}>
+                    <span className={workspace.description ? undefined : 'exercise-item__muted'}>{workspace.description ?? t('common.noDescription')}</span>
                   </div>
                   <div className="data-table__cell data-table__cell--actions">
                     <div className="data-table__menu">
                       <button
                         type="button"
                         className="data-table__menu-trigger"
-                        aria-label={`Open actions for ${workspace.name}`}
+                        aria-label={t('workspaces.openActions', { name: workspace.name })}
                         aria-expanded={openMenuId === workspace.id}
                         onClick={() => setOpenMenuId((current) => (current === workspace.id ? null : workspace.id))}
                       >
@@ -175,10 +176,10 @@ export function WorkspacesPage() {
                               navigate(`/workspaces/${workspace.id}/edit`);
                             }}
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button type="button" className="data-table__menu-item data-table__menu-item--danger" disabled={isDeletingId === workspace.id} onClick={() => void handleDelete(workspace)}>
-                            {isDeletingId === workspace.id ? 'Deleting...' : 'Delete'}
+                            {isDeletingId === workspace.id ? t('common.deleting') : t('common.delete')}
                           </button>
                         </div>
                       ) : null}
@@ -196,6 +197,7 @@ export function WorkspacesPage() {
 
 export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [form, setForm] = useState<WorkspaceFormState>(emptyForm);
@@ -216,7 +218,7 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
       setErrorMessage('');
 
       try {
-        const workspaces = await getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.');
+        const workspaces = await getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed'));
 
         if (!isActive) {
           return;
@@ -225,7 +227,7 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
         const workspace = workspaces.find((item) => item.id === workspaceId);
 
         if (!workspace) {
-          setErrorMessage('Workspace not found.');
+          setErrorMessage(t('workspaces.notFound'));
           return;
         }
 
@@ -250,7 +252,7 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
     return () => {
       isActive = false;
     };
-  }, [apiBaseUrl, authenticatedFetch, mode, workspaceId]);
+  }, [apiBaseUrl, authenticatedFetch, mode, t, workspaceId]);
 
   const handleChange =
     (field: keyof WorkspaceFormState) =>
@@ -265,7 +267,7 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      setErrorMessage('Workspace name is required.');
+      setErrorMessage(t('workspaces.nameRequired'));
       return;
     }
 
@@ -280,9 +282,9 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
     try {
       if (mode === 'edit' && workspaceId) {
-        await sendJson(`${apiBaseUrl}/workspaces/${workspaceId}`, 'PUT', authenticatedFetch, payload, 'Failed to update workspace.');
+        await sendJson(`${apiBaseUrl}/workspaces/${workspaceId}`, 'PUT', authenticatedFetch, payload, t('workspaces.updateFailed'));
       } else {
-        await sendJson(`${apiBaseUrl}/workspaces`, 'POST', authenticatedFetch, payload, 'Failed to create workspace.');
+        await sendJson(`${apiBaseUrl}/workspaces`, 'POST', authenticatedFetch, payload, t('workspaces.createFailed'));
       }
 
       navigate('/workspaces');
@@ -297,12 +299,12 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Workspaces</p>
-          <h2>{mode === 'edit' ? 'Edit workspace' : 'Add workspace'}</h2>
-          <p>{mode === 'edit' ? 'Adjust workspace details on a dedicated page.' : 'Create a workspace on a dedicated page.'}</p>
+          <p className="feature-page__eyebrow">{t('nav.workspaces')}</p>
+          <h2>{mode === 'edit' ? t('workspaces.editTitle') : t('workspaces.addTitle')}</h2>
+          <p>{mode === 'edit' ? t('workspaces.editDescription') : t('workspaces.addDescription')}</p>
         </div>
         <button type="button" className="button button--secondary" onClick={() => navigate('/workspaces')}>
-          Back
+          {t('common.back')}
         </button>
       </div>
 
@@ -310,21 +312,21 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
       <section className="card calendar-day-panel">
         {isLoading ? (
-          <p className="exercise-page__state">Loading form...</p>
+          <p className="exercise-page__state">{t('common.loadingForm')}</p>
         ) : (
           <form className="exercise-form" onSubmit={handleSubmit}>
             <div className="field">
-              <label htmlFor="workspace-name">Name</label>
+              <label htmlFor="workspace-name">{t('common.name')}</label>
               <input id="workspace-name" type="text" value={form.name} onChange={handleChange('name')} />
             </div>
 
             <div className="field">
-              <label htmlFor="workspace-description">Description</label>
+              <label htmlFor="workspace-description">{t('common.description')}</label>
               <textarea id="workspace-description" rows={4} value={form.description} onChange={handleChange('description')} />
             </div>
 
             <div className="field">
-              <label htmlFor="workspace-color">Color</label>
+              <label htmlFor="workspace-color">{t('common.color')}</label>
               <div className="workspace-color-field">
                 <input id="workspace-color" className="workspace-color-field__picker" type="color" value={normalizeColorHex(form.colorHex)} onChange={handleChange('colorHex')} />
                 <span className="workspace-color-field__value">{normalizeColorHex(form.colorHex)}</span>
@@ -332,7 +334,7 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
             </div>
 
             <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : mode === 'edit' ? 'Save changes' : 'Add workspace'}
+              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('workspaces.submitAdd')}
             </button>
           </form>
         )}

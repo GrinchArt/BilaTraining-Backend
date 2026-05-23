@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, sendVoid, toMessage } from '../../shared/api';
 import { emptyClient, formatClientName } from '../../shared/client.utils';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
@@ -12,6 +13,7 @@ export { SessionFormPage };
 
 export function SessionsPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -34,9 +36,9 @@ export function SessionsPage() {
 
     try {
       const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
-        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
-        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
-        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, t('sessions.loadFailed')),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
       ]);
 
       setSessions(nextSessions);
@@ -47,7 +49,7 @@ export function SessionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authenticatedFetch]);
+  }, [apiBaseUrl, authenticatedFetch, t]);
 
   useEffect(() => {
     void loadSessionsPage();
@@ -68,20 +70,20 @@ export function SessionsPage() {
         }
 
         const clientLabel = formatClientName(clientById.get(session.clientId) ?? emptyClient(session.clientId));
-        const workspaceLabel = workspaceById.get(session.workspaceId)?.name ?? 'Unknown workspace';
-        const statusLabel = sessionStatusLabel(session.status);
+        const workspaceLabel = workspaceById.get(session.workspaceId)?.name ?? t('common.unknownWorkspace');
+        const statusLabel = sessionStatusLabel(session.status, t);
         const haystack = [clientLabel, workspaceLabel, statusLabel, session.notes ?? ''].join(' ').toLowerCase();
 
         return haystack.includes(normalizedQuery);
       });
-  }, [clientById, search, sessions, statusFilter, workspaceById]);
+  }, [clientById, search, sessions, statusFilter, t, workspaceById]);
 
   const handleDelete = async (session: Session) => {
     setIsDeletingId(session.id);
     setErrorMessage('');
 
     try {
-      await sendVoid(`${apiBaseUrl}/sessions/${session.id}`, 'DELETE', authenticatedFetch, 'Failed to delete session.');
+      await sendVoid(`${apiBaseUrl}/sessions/${session.id}`, 'DELETE', authenticatedFetch, t('sessions.deleteFailed'));
       await loadSessionsPage();
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -94,12 +96,12 @@ export function SessionsPage() {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Sessions</p>
-          <h2>Sessions</h2>
-          <p>Use the list to search and filter sessions, then open a dedicated page to create or edit them.</p>
+          <p className="feature-page__eyebrow">{t('sessions.title')}</p>
+          <h2>{t('sessions.title')}</h2>
+          <p>{t('sessions.description')}</p>
         </div>
         <div className="calendar-toolbar">
-          <button type="button" className="button" aria-label="Add session" onClick={() => navigate('/sessions/new')}>
+          <button type="button" className="button" aria-label={t('calendar.addSession')} onClick={() => navigate('/sessions/new')}>
             +
           </button>
         </div>
@@ -110,38 +112,38 @@ export function SessionsPage() {
       <div className="exercise-page__grid exercise-page__grid--single">
         <section className="card">
           <div className="exercise-page__section-header">
-            <h3>Session list</h3>
+            <h3>{t('sessions.list')}</h3>
             <span className="exercise-page__count">{filteredSessions.length}</span>
           </div>
 
           <div className="field">
-            <label htmlFor="session-search">Search</label>
+            <label htmlFor="session-search">{t('common.search')}</label>
             <input
               id="session-search"
               type="search"
-              placeholder="Client, workspace, note, or status"
+              placeholder={t('sessions.searchPlaceholder')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
 
           <div className="field">
-            <label htmlFor="session-statusFilter">Status</label>
+            <label htmlFor="session-statusFilter">{t('common.status')}</label>
             <select
               id="session-statusFilter"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as 'all' | `${SessionStatus}`)}
             >
-              <option value="all">All statuses</option>
-              <option value="0">Planned</option>
-              <option value="1">Completed</option>
-              <option value="2">Cancelled</option>
-              <option value="3">No show</option>
+              <option value="all">{t('sessions.allStatuses')}</option>
+              <option value="0">{t('status.planned')}</option>
+              <option value="1">{t('status.completed')}</option>
+              <option value="2">{t('status.cancelled')}</option>
+              <option value="3">{t('status.noShow')}</option>
             </select>
           </div>
 
-          {isLoading ? <p className="exercise-page__state">Loading sessions...</p> : null}
-          {!isLoading && filteredSessions.length === 0 ? <p className="exercise-page__state">No sessions match the current filters.</p> : null}
+          {isLoading ? <p className="exercise-page__state">{t('sessions.loading')}</p> : null}
+          {!isLoading && filteredSessions.length === 0 ? <p className="exercise-page__state">{t('sessions.emptyFilters')}</p> : null}
           {!isLoading && filteredSessions.length > 0 ? (
             <div className="exercise-list">
               {filteredSessions.map((session) => {
@@ -152,26 +154,26 @@ export function SessionsPage() {
                   <article key={session.id} className="exercise-item">
                     <div className="exercise-item__content">
                       <div className="exercise-item__title-row">
-                        <h4>{workspace?.name ?? 'Unknown workspace'}</h4>
+                        <h4>{workspace?.name ?? t('common.unknownWorkspace')}</h4>
                         <span className={`exercise-item__tag calendar-status-tag calendar-status-tag--${session.status}`}>
-                          {sessionStatusLabel(session.status)}
+                          {sessionStatusLabel(session.status, t)}
                         </span>
                       </div>
 
                       <div className="client-item__meta">
-                        <span>{client ? formatClientName(client) : 'Unknown client'}</span>
-                        <span>{formatSessionWindow(session.startAtUtc, session.endAtUtc)}</span>
+                        <span>{client ? formatClientName(client) : t('common.unknownClient')}</span>
+                        <span>{formatSessionWindow(session.startAtUtc, session.endAtUtc, locale)}</span>
                       </div>
 
-                      {session.notes ? <p>{session.notes}</p> : <p className="exercise-item__muted">No notes.</p>}
+                      {session.notes ? <p>{session.notes}</p> : <p className="exercise-item__muted">{t('common.noNotes')}</p>}
                     </div>
 
                     <div className="exercise-item__actions">
                       <button type="button" className="button button--secondary" onClick={() => navigate(`/sessions/${session.id}/edit`)}>
-                        Edit
+                        {t('common.edit')}
                       </button>
                       <button type="button" className="button button--danger" disabled={isDeletingId === session.id} onClick={() => void handleDelete(session)}>
-                        {isDeletingId === session.id ? 'Deleting...' : 'Delete'}
+                        {isDeletingId === session.id ? t('common.deleting') : t('common.delete')}
                       </button>
                     </div>
                   </article>

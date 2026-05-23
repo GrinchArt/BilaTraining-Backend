@@ -1,4 +1,5 @@
 import type { AuthenticatedFetch } from '../auth';
+import { translateStatic } from '../i18n';
 
 type AuthError = {
   status?: number;
@@ -20,10 +21,10 @@ export function toMessage(error: unknown): string {
   }
 
   if (authError?.status === 0 || error instanceof TypeError) {
-    return 'The API is unreachable. Make sure the backend is running and CORS is enabled.';
+    return translateStatic('errors.apiUnreachable');
   }
 
-  return 'The request failed. Please review the form and try again.';
+  return translateStatic('errors.requestFailed');
 }
 
 function createAuthHeaders(accessToken: string | null | undefined, includeJson = false): HeadersInit {

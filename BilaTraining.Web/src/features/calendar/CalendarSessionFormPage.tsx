@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, sendJson, sendPatch, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
@@ -9,6 +10,7 @@ import { combineDayAndTime, extractTime, parseDayKey, startOfDay, toDateTimeLoca
 
 export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
   const { dayKey, sessionId } = useParams<{ dayKey: string; sessionId: string }>();
   const selectedDay = useMemo(() => parseDayKey(dayKey) ?? startOfDay(new Date()), [dayKey]);
@@ -46,9 +48,9 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
       try {
         if (mode === 'edit') {
           const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
-            getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
-            getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
-            getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+            getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, t('sessions.loadFailed')),
+            getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
+            getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
           ]);
 
           if (!isActive) {
@@ -70,12 +72,12 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
               status: session.status,
             });
           } else {
-            setErrorMessage('Session not found.');
+            setErrorMessage(t('calendar.sessionNotFound'));
           }
         } else {
           const [nextClients, nextWorkspaces] = await Promise.all([
-            getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
-            getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+            getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
+            getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
           ]);
 
           if (!isActive) {
@@ -102,7 +104,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     return () => {
       isActive = false;
     };
-  }, [apiBaseUrl, authenticatedFetch, mode, sessionId]);
+  }, [apiBaseUrl, authenticatedFetch, mode, sessionId, t]);
 
   useEffect(() => {
     if (mode !== 'create') {
@@ -139,7 +141,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     event.preventDefault();
 
     if (!form.workspaceId || !form.clientId || !form.startAtLocal || !form.endAtLocal) {
-      setErrorMessage('Workspace, client, start time, and end time are required.');
+      setErrorMessage(t('calendar.formRequired'));
       return;
     }
 
@@ -161,7 +163,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
           'PUT',
           authenticatedFetch,
           payload,
-          'Failed to update session.',
+          t('calendar.updateFailed'),
         );
 
         if (editingSession.status !== form.status) {
@@ -169,11 +171,11 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             `${apiBaseUrl}/sessions/${editingSession.id}/status`,
             authenticatedFetch,
             { status: form.status },
-            'Failed to update session status.',
+            t('calendar.updateStatusFailed'),
           );
         }
       } else {
-        await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, 'Failed to create session.');
+        await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, t('calendar.createFailed'));
       }
 
       if (window.history.length > 1) {
@@ -192,12 +194,12 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     <section className="calendar-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Calendar Session</p>
-          <h2>{mode === 'edit' ? 'Edit session' : 'Create session'}</h2>
-          <p>{selectedDay.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <p className="feature-page__eyebrow">{t('calendar.formEyebrow')}</p>
+          <h2>{mode === 'edit' ? t('calendar.editSession') : t('calendar.createSession')}</h2>
+          <p>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
         <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
-          Back
+          {t('common.back')}
         </button>
       </div>
 
@@ -205,13 +207,13 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
       <section className="card calendar-day-panel">
         {isLoading ? (
-          <p className="exercise-page__state">Loading form...</p>
+          <p className="exercise-page__state">{t('common.loadingForm')}</p>
         ) : (
           <form className="exercise-form" onSubmit={handleSubmit}>
             <div className="field">
-              <label htmlFor="calendar-workspace">Workspace</label>
+              <label htmlFor="calendar-workspace">{t('common.workspace')}</label>
               <select id="calendar-workspace" value={form.workspaceId} onChange={handleChange('workspaceId')}>
-                <option value="">Choose workspace</option>
+                <option value="">{t('common.chooseWorkspace')}</option>
                 {workspaces.map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
                     {workspace.name}
@@ -221,9 +223,9 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             </div>
 
             <div className="field">
-              <label htmlFor="calendar-client">Client</label>
+              <label htmlFor="calendar-client">{t('common.client')}</label>
               <select id="calendar-client" value={form.clientId} onChange={handleChange('clientId')}>
-                <option value="">Choose client</option>
+                <option value="">{t('common.chooseClient')}</option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
                     {formatClientName(client)}
@@ -234,32 +236,32 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
             <div className="calendar-form__times">
               <div className="field">
-                <label htmlFor="calendar-start">Start</label>
+                <label htmlFor="calendar-start">{t('common.start')}</label>
                 <input id="calendar-start" type="datetime-local" value={form.startAtLocal} onChange={handleChange('startAtLocal')} />
               </div>
               <div className="field">
-                <label htmlFor="calendar-end">End</label>
+                <label htmlFor="calendar-end">{t('common.end')}</label>
                 <input id="calendar-end" type="datetime-local" value={form.endAtLocal} onChange={handleChange('endAtLocal')} />
               </div>
             </div>
 
             <div className="field">
-              <label htmlFor="calendar-status">Status</label>
+              <label htmlFor="calendar-status">{t('common.status')}</label>
               <select id="calendar-status" value={form.status} onChange={handleChange('status')}>
-                <option value={0}>Planned</option>
-                <option value={1}>Completed</option>
-                <option value={2}>Cancelled</option>
-                <option value={3}>No show</option>
+                <option value={0}>{t('status.planned')}</option>
+                <option value={1}>{t('status.completed')}</option>
+                <option value={2}>{t('status.cancelled')}</option>
+                <option value={3}>{t('status.noShow')}</option>
               </select>
             </div>
 
             <div className="field">
-              <label htmlFor="calendar-notes">Notes</label>
+              <label htmlFor="calendar-notes">{t('common.notes')}</label>
               <textarea id="calendar-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
             </div>
 
             <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? (mode === 'edit' ? 'Saving...' : 'Creating...') : mode === 'edit' ? 'Save changes' : 'Create session'}
+              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('calendar.createSession')}
             </button>
           </form>
         )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import { hexToRgba, normalizeColorHex } from '../../shared/color';
@@ -10,6 +11,7 @@ import { buildMonthGrid, formatTimeShort, startOfDay, toDayKey } from './calenda
 
 export function CalendarPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
@@ -28,9 +30,9 @@ export function CalendarPage() {
 
     try {
       const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
-        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
-        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
-        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, t('sessions.loadFailed')),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
       ]);
 
       setSessions(nextSessions);
@@ -41,7 +43,7 @@ export function CalendarPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authenticatedFetch]);
+  }, [apiBaseUrl, authenticatedFetch, t]);
 
   useEffect(() => {
     void loadCalendar();
@@ -79,9 +81,9 @@ export function CalendarPage() {
     <section className="calendar-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Calendar</p>
-          <h2>Calendar</h2>
-          <p>Plan the month first. Open a day to see every entry, including overlapping sessions.</p>
+          <p className="feature-page__eyebrow">{t('calendar.title')}</p>
+          <h2>{t('calendar.title')}</h2>
+          <p>{t('calendar.description')}</p>
         </div>
       </div>
 
@@ -90,19 +92,19 @@ export function CalendarPage() {
       <section className="card calendar-board">
         <div className="calendar-board__header">
           <button type="button" className="button button--secondary" onClick={() => moveMonth(-1)}>
-            Prev
+            {t('common.prev')}
           </button>
           <div className="calendar-board__title">
-            <h3>{visibleMonth.toLocaleDateString([], { month: 'long', year: 'numeric' })}</h3>
-            <p>{sessionsByDay.size} active day entries</p>
+            <h3>{visibleMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}</h3>
+            <p>{t('calendar.activeDays', { count: sessionsByDay.size })}</p>
           </div>
           <button type="button" className="button button--secondary" onClick={() => moveMonth(1)}>
-            Next
+            {t('common.next')}
           </button>
         </div>
 
         <div className="calendar-board__weekdays">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (
+          {Array.from({ length: 7 }, (_, index) => new Date(2024, 0, 1 + index).toLocaleDateString(locale, { weekday: 'short' })).map((label) => (
             <span key={label}>{label}</span>
           ))}
         </div>
@@ -119,6 +121,7 @@ export function CalendarPage() {
                 type="button"
                 key={dayKey}
                 className={`calendar-day${isCurrentMonth ? '' : ' is-outside'}${isToday ? ' is-today' : ''}`}
+                aria-label={t('calendar.openDay', { date: day.toLocaleDateString(locale, { month: 'long', day: 'numeric' }) })}
                 onClick={() => handlePickDay(day)}
               >
                 <span className="calendar-day__number">{day.getDate()}</span>
@@ -137,8 +140,8 @@ export function CalendarPage() {
                           borderColor: hexToRgba(workspaceColor, 0.48),
                         }}
                       >
-                        <strong>{formatTimeShort(session.startAtUtc)}</strong>
-                        <span>{client ? formatClientName(client) : workspace?.name ?? 'Session'}</span>
+                        <strong>{formatTimeShort(session.startAtUtc, locale)}</strong>
+                        <span>{client ? formatClientName(client) : workspace?.name ?? t('calendar.defaultSession')}</span>
                       </span>
                     );
                   })}

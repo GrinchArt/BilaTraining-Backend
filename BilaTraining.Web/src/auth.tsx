@@ -7,6 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
+import { translateStatic } from './i18n';
 
 const AUTH_STORAGE_KEY = 'bila-training.auth-session';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5175/api';
@@ -86,7 +87,7 @@ async function postJson<TRequest, TResponse>(path: string, payload: TRequest): P
   if (!response.ok) {
     const error = await response
       .json()
-      .catch(() => ({ message: 'The request failed. Please try again.' }));
+      .catch(() => ({ message: translateStatic('errors.requestFailedShort') }));
     throw { status: response.status, error };
   }
 

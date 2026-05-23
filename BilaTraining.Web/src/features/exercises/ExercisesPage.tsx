@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormE
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, sendJson, sendVoid, toMessage } from '../../shared/api';
 import type { Exercise } from '../../shared/models';
 
@@ -19,6 +20,7 @@ const emptyForm: ExerciseFormState = {
 
 export function ExercisesPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState('');
@@ -32,14 +34,14 @@ export function ExercisesPage() {
     setErrorMessage('');
 
     try {
-      const data = await getJson<Exercise[]>(`${apiBaseUrl}/exercises`, authenticatedFetch, 'Failed to load exercises.');
+      const data = await getJson<Exercise[]>(`${apiBaseUrl}/exercises`, authenticatedFetch, t('exercises.loadFailed'));
       setExercises(data);
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authenticatedFetch]);
+  }, [apiBaseUrl, authenticatedFetch, t]);
 
   useEffect(() => {
     void loadExercises();
@@ -89,7 +91,7 @@ export function ExercisesPage() {
     setErrorMessage('');
 
     try {
-      await sendVoid(`${apiBaseUrl}/exercises/${exercise.id}`, 'DELETE', authenticatedFetch, 'Failed to delete exercise.');
+      await sendVoid(`${apiBaseUrl}/exercises/${exercise.id}`, 'DELETE', authenticatedFetch, t('exercises.deleteFailed'));
       await loadExercises();
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -102,14 +104,8 @@ export function ExercisesPage() {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Exercises</p>
-          <h2>Exercises</h2>
-          <p>Keep the library as a searchable list and move create or edit flows to separate screens.</p>
-        </div>
-        <div className="calendar-toolbar">
-          <button type="button" className="button" aria-label="Add exercise" onClick={() => navigate('/exercises/new')}>
-            +
-          </button>
+          <p className="feature-page__eyebrow">{t('nav.exercises')}</p>
+          <h2>{t('exercises.title')}</h2>
         </div>
       </div>
 
@@ -118,46 +114,51 @@ export function ExercisesPage() {
       <div className="exercise-page__grid exercise-page__grid--single">
         <section className="card">
           <div className="exercise-page__section-header">
-            <h3>Library</h3>
-            <span className="exercise-page__count">{filteredExercises.length}</span>
+            <h3>{t('exercises.library')}</h3>
+            <div className="exercise-page__section-actions">
+              <span className="exercise-page__count">{filteredExercises.length}</span>
+              <button type="button" className="exercise-page__count-button" aria-label={t('exercises.add')} onClick={() => navigate('/exercises/new')}>
+                +
+              </button>
+            </div>
           </div>
 
           <div className="field">
-            <label htmlFor="exercise-search">Search by name</label>
-            <input id="exercise-search" type="search" placeholder="Start typing a name" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <label htmlFor="exercise-search">{t('exercises.searchLabel')}</label>
+            <input id="exercise-search" type="search" placeholder={t('exercises.searchPlaceholder')} value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
 
-          {isLoading ? <p className="exercise-page__state">Loading exercises...</p> : null}
+          {isLoading ? <p className="exercise-page__state">{t('exercises.loading')}</p> : null}
           {!isLoading && filteredExercises.length === 0 ? (
-            <p className="exercise-page__state">{exercises.length === 0 ? 'No exercises yet.' : 'No exercises match the current search.'}</p>
+            <p className="exercise-page__state">{exercises.length === 0 ? t('exercises.empty') : t('exercises.emptySearch')}</p>
           ) : null}
           {!isLoading && filteredExercises.length > 0 ? (
             <div className="data-table data-table--exercises">
               <div className="data-table__header" aria-hidden="true">
-                <span>Name</span>
-                <span>Category</span>
-                <span>Notes</span>
+                <span>{t('common.name')}</span>
+                <span>{t('common.category')}</span>
+                <span>{t('common.notes')}</span>
                 <span></span>
               </div>
               {filteredExercises.map((exercise) => (
                 <article key={exercise.id} className="data-table__row">
-                  <div className="data-table__cell" data-label="Name">
+                  <div className="data-table__cell" data-label={t('common.name')}>
                     <div className="data-table__primary">
                       <strong>{exercise.name}</strong>
                     </div>
                   </div>
-                  <div className="data-table__cell" data-label="Category">
-                    {exercise.category ? <span className="exercise-item__tag">{exercise.category}</span> : <span className="exercise-item__muted">No category</span>}
+                  <div className="data-table__cell" data-label={t('common.category')}>
+                    {exercise.category ? <span className="exercise-item__tag">{exercise.category}</span> : <span className="exercise-item__muted">{t('common.noCategory')}</span>}
                   </div>
-                  <div className="data-table__cell" data-label="Notes">
-                    <span className={exercise.notes ? undefined : 'exercise-item__muted'}>{exercise.notes ?? 'No notes.'}</span>
+                  <div className="data-table__cell" data-label={t('common.notes')}>
+                    <span className={exercise.notes ? undefined : 'exercise-item__muted'}>{exercise.notes ?? t('common.noNotes')}</span>
                   </div>
                   <div className="data-table__cell data-table__cell--actions">
                     <div className="data-table__menu">
                       <button
                         type="button"
                         className="data-table__menu-trigger"
-                        aria-label={`Open actions for ${exercise.name}`}
+                        aria-label={t('exercises.openActions', { name: exercise.name })}
                         aria-expanded={openMenuId === exercise.id}
                         onClick={() => setOpenMenuId((current) => (current === exercise.id ? null : exercise.id))}
                       >
@@ -173,10 +174,10 @@ export function ExercisesPage() {
                               navigate(`/exercises/${exercise.id}/edit`);
                             }}
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button type="button" className="data-table__menu-item data-table__menu-item--danger" disabled={isDeletingId === exercise.id} onClick={() => void handleDelete(exercise)}>
-                            {isDeletingId === exercise.id ? 'Deleting...' : 'Delete'}
+                            {isDeletingId === exercise.id ? t('common.deleting') : t('common.delete')}
                           </button>
                         </div>
                       ) : null}
@@ -194,6 +195,7 @@ export function ExercisesPage() {
 
 export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { exerciseId } = useParams<{ exerciseId: string }>();
   const [form, setForm] = useState<ExerciseFormState>(emptyForm);
@@ -214,7 +216,7 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
       setErrorMessage('');
 
       try {
-        const exercises = await getJson<Exercise[]>(`${apiBaseUrl}/exercises`, authenticatedFetch, 'Failed to load exercises.');
+        const exercises = await getJson<Exercise[]>(`${apiBaseUrl}/exercises`, authenticatedFetch, t('exercises.loadFailed'));
 
         if (!isActive) {
           return;
@@ -223,7 +225,7 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
         const exercise = exercises.find((item) => item.id === exerciseId);
 
         if (!exercise) {
-          setErrorMessage('Exercise not found.');
+          setErrorMessage(t('exercises.notFound'));
           return;
         }
 
@@ -248,7 +250,7 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
     return () => {
       isActive = false;
     };
-  }, [apiBaseUrl, authenticatedFetch, exerciseId, mode]);
+  }, [apiBaseUrl, authenticatedFetch, exerciseId, mode, t]);
 
   const handleChange =
     (field: keyof ExerciseFormState) =>
@@ -263,7 +265,7 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      setErrorMessage('Exercise name is required.');
+      setErrorMessage(t('exercises.nameRequired'));
       return;
     }
 
@@ -278,9 +280,9 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
     try {
       if (mode === 'edit' && exerciseId) {
-        await sendJson(`${apiBaseUrl}/exercises/${exerciseId}`, 'PUT', authenticatedFetch, payload, 'Failed to update exercise.');
+        await sendJson(`${apiBaseUrl}/exercises/${exerciseId}`, 'PUT', authenticatedFetch, payload, t('exercises.updateFailed'));
       } else {
-        await sendJson(`${apiBaseUrl}/exercises`, 'POST', authenticatedFetch, payload, 'Failed to create exercise.');
+        await sendJson(`${apiBaseUrl}/exercises`, 'POST', authenticatedFetch, payload, t('exercises.createFailed'));
       }
 
       navigate('/exercises');
@@ -295,12 +297,12 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Exercises</p>
-          <h2>{mode === 'edit' ? 'Edit exercise' : 'Add exercise'}</h2>
-          <p>{mode === 'edit' ? 'Update an exercise on a standalone screen.' : 'Create a new exercise on a standalone screen.'}</p>
+          <p className="feature-page__eyebrow">{t('nav.exercises')}</p>
+          <h2>{mode === 'edit' ? t('exercises.editTitle') : t('exercises.addTitle')}</h2>
+          <p>{mode === 'edit' ? t('exercises.editDescription') : t('exercises.addDescription')}</p>
         </div>
         <button type="button" className="button button--secondary" onClick={() => navigate('/exercises')}>
-          Back
+          {t('common.back')}
         </button>
       </div>
 
@@ -308,26 +310,26 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
       <section className="card calendar-day-panel">
         {isLoading ? (
-          <p className="exercise-page__state">Loading form...</p>
+          <p className="exercise-page__state">{t('common.loadingForm')}</p>
         ) : (
           <form className="exercise-form" onSubmit={handleSubmit}>
             <div className="field">
-              <label htmlFor="exercise-name">Name</label>
+              <label htmlFor="exercise-name">{t('common.name')}</label>
               <input id="exercise-name" type="text" value={form.name} onChange={handleChange('name')} />
             </div>
 
             <div className="field">
-              <label htmlFor="exercise-category">Category</label>
+              <label htmlFor="exercise-category">{t('common.category')}</label>
               <input id="exercise-category" type="text" value={form.category} onChange={handleChange('category')} />
             </div>
 
             <div className="field">
-              <label htmlFor="exercise-notes">Notes</label>
+              <label htmlFor="exercise-notes">{t('common.notes')}</label>
               <textarea id="exercise-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
             </div>
 
             <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : mode === 'edit' ? 'Save changes' : 'Add exercise'}
+              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('exercises.submitAdd')}
             </button>
           </form>
         )}

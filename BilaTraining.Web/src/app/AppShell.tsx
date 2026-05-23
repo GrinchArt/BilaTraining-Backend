@@ -2,15 +2,17 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 
 import { useAuth } from '../auth';
+import { useI18n } from '../i18n';
 
 export function AppShell() {
   const navigate = useNavigate();
   const { isAuthenticated, logout, session } = useAuth();
+  const { language, setLanguage, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const identityLabel = useMemo(
-    () => session?.displayName ?? session?.email ?? 'Signed in',
-    [session?.displayName, session?.email],
+    () => session?.displayName ?? session?.email ?? t('common.signedIn'),
+    [session?.displayName, session?.email, t],
   );
 
   const closeMenu = () => setMenuOpen(false);
@@ -24,21 +26,21 @@ export function AppShell() {
 
   const navItems = isAuthenticated
     ? [
-        { to: '/clients', label: 'Clients' },
-        { to: '/workspaces', label: 'Workspaces' },
-        { to: '/exercises', label: 'Exercises' },
-        { to: '/calendar', label: 'Calendar' },
-        { to: '/reports', label: 'Reports' },
+        { to: '/clients', label: t('nav.clients') },
+        { to: '/workspaces', label: t('nav.workspaces') },
+        { to: '/exercises', label: t('nav.exercises') },
+        { to: '/calendar', label: t('nav.calendar') },
+        { to: '/reports', label: t('nav.reports') },
       ]
     : [
-        { to: '/auth/login', label: 'Login' },
-        { to: '/auth/register', label: 'Register' },
+        { to: '/auth/login', label: t('nav.login') },
+        { to: '/auth/register', label: t('nav.register') },
       ];
 
   return (
     <div className="shell">
       {menuOpen ? (
-        <button type="button" className="shell__scrim" aria-label="Close menu" onClick={closeMenu} />
+        <button type="button" className="shell__scrim" aria-label={t('common.close')} onClick={closeMenu} />
       ) : null}
 
       <header className="shell__header">
@@ -48,7 +50,7 @@ export function AppShell() {
             className={`shell__burger${menuOpen ? ' is-active' : ''}`}
             aria-expanded={menuOpen}
             aria-controls="primary-menu"
-            aria-label="Open navigation menu"
+            aria-label={t('common.navigation')}
             onClick={toggleMenu}
           >
             <span></span>
@@ -57,15 +59,15 @@ export function AppShell() {
           </button>
 
           <div className="shell__header-main">
-            <p className="shell__eyebrow">BilaTraining</p>
-            <h1>Coach Dashboard</h1>
+            <p className="shell__eyebrow">{t('app.name')}</p>
+            <h1>{t('app.dashboard')}</h1>
           </div>
         </div>
       </header>
 
       <aside id="primary-menu" className={`shell__drawer${menuOpen ? ' is-open' : ''}`}>
         <div className="shell__drawer-card">
-          <p className="shell__drawer-eyebrow">Navigation</p>
+          <p className="shell__drawer-eyebrow">{t('common.navigation')}</p>
           <nav className="shell__drawer-nav" aria-label="Primary">
             {navItems.map((item) => (
               <NavLink
@@ -79,6 +81,26 @@ export function AppShell() {
             ))}
           </nav>
 
+          <div className="shell__locale">
+            <p className="shell__drawer-eyebrow">{t('common.language')}</p>
+            <div className="shell__locale-toggle" role="group" aria-label={t('common.language')}>
+              <button
+                type="button"
+                className={`shell__locale-button${language === 'en' ? ' is-active' : ''}`}
+                onClick={() => setLanguage('en')}
+              >
+                {t('common.english')}
+              </button>
+              <button
+                type="button"
+                className={`shell__locale-button${language === 'uk' ? ' is-active' : ''}`}
+                onClick={() => setLanguage('uk')}
+              >
+                {t('common.ukrainian')}
+              </button>
+            </div>
+          </div>
+
           <div className="shell__drawer-footer">
             {isAuthenticated ? (
               <div className="shell__profile">
@@ -86,11 +108,11 @@ export function AppShell() {
                   <strong>{identityLabel}</strong>
                 </p>
                 <button type="button" className="shell__logout" onClick={handleLogout}>
-                  Log out
+                  {t('common.logout')}
                 </button>
               </div>
             ) : (
-              <p className="shell__identity">Not signed in yet</p>
+              <p className="shell__identity">{t('common.notSignedIn')}</p>
             )}
           </div>
         </div>

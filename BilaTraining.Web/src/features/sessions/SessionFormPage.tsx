@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, sendJson, sendPatch, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
@@ -18,6 +19,7 @@ type SessionFormState = {
 
 export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
   const initialDay = useMemo(() => startOfDay(new Date()), []);
@@ -45,9 +47,9 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
       try {
         const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
-          getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
-          getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
-          getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+          getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, t('sessions.loadFailed')),
+          getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
+          getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
         ]);
 
         if (!isActive) {
@@ -66,7 +68,7 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
         setEditingSession(session);
 
         if (!session) {
-          setErrorMessage('Session not found.');
+          setErrorMessage(t('sessions.notFound'));
           return;
         }
 
@@ -94,7 +96,7 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     return () => {
       isActive = false;
     };
-  }, [apiBaseUrl, authenticatedFetch, mode, sessionId]);
+  }, [apiBaseUrl, authenticatedFetch, mode, sessionId, t]);
 
   const handleChange =
     (field: keyof SessionFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -110,7 +112,7 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     event.preventDefault();
 
     if (!form.workspaceId || !form.clientId || !form.startAtLocal || !form.endAtLocal) {
-      setErrorMessage('Workspace, client, start time, and end time are required.');
+      setErrorMessage(t('sessions.formRequired'));
       return;
     }
 
@@ -127,18 +129,18 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
       };
 
       if (mode === 'edit' && editingSession) {
-        await sendJson(`${apiBaseUrl}/sessions/${editingSession.id}`, 'PUT', authenticatedFetch, payload, 'Failed to update session.');
+        await sendJson(`${apiBaseUrl}/sessions/${editingSession.id}`, 'PUT', authenticatedFetch, payload, t('sessions.updateFailed'));
 
         if (editingSession.status !== form.status) {
           await sendPatch(
             `${apiBaseUrl}/sessions/${editingSession.id}/status`,
             authenticatedFetch,
             { status: form.status },
-            'Failed to update session status.',
+            t('sessions.updateStatusFailed'),
           );
         }
       } else {
-        await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, 'Failed to create session.');
+        await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, t('sessions.createFailed'));
       }
 
       navigate('/sessions');
@@ -153,12 +155,12 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Sessions</p>
-          <h2>{mode === 'edit' ? 'Edit session' : 'Add session'}</h2>
-          <p>{mode === 'edit' ? 'Update the session on a standalone page.' : 'Create a new session from the sessions tab.'}</p>
+          <p className="feature-page__eyebrow">{t('sessions.title')}</p>
+          <h2>{mode === 'edit' ? t('sessions.editTitle') : t('sessions.addTitle')}</h2>
+          <p>{mode === 'edit' ? t('sessions.editDescription') : t('sessions.addDescription')}</p>
         </div>
         <button type="button" className="button button--secondary" onClick={() => navigate('/sessions')}>
-          Back
+          {t('common.back')}
         </button>
       </div>
 
@@ -166,13 +168,13 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
       <section className="card calendar-day-panel">
         {isLoading ? (
-          <p className="exercise-page__state">Loading form...</p>
+          <p className="exercise-page__state">{t('common.loadingForm')}</p>
         ) : (
           <form className="exercise-form" onSubmit={handleSubmit}>
             <div className="field">
-              <label htmlFor="session-workspace">Workspace</label>
+              <label htmlFor="session-workspace">{t('common.workspace')}</label>
               <select id="session-workspace" value={form.workspaceId} onChange={handleChange('workspaceId')}>
-                <option value="">Choose workspace</option>
+                <option value="">{t('common.chooseWorkspace')}</option>
                 {workspaces.map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
                     {workspace.name}
@@ -182,9 +184,9 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             </div>
 
             <div className="field">
-              <label htmlFor="session-client">Client</label>
+              <label htmlFor="session-client">{t('common.client')}</label>
               <select id="session-client" value={form.clientId} onChange={handleChange('clientId')}>
-                <option value="">Choose client</option>
+                <option value="">{t('common.chooseClient')}</option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
                     {formatClientName(client)}
@@ -195,32 +197,32 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
             <div className="calendar-form__times">
               <div className="field">
-                <label htmlFor="session-start">Start</label>
+                <label htmlFor="session-start">{t('common.start')}</label>
                 <input id="session-start" type="datetime-local" value={form.startAtLocal} onChange={handleChange('startAtLocal')} />
               </div>
               <div className="field">
-                <label htmlFor="session-end">End</label>
+                <label htmlFor="session-end">{t('common.end')}</label>
                 <input id="session-end" type="datetime-local" value={form.endAtLocal} onChange={handleChange('endAtLocal')} />
               </div>
             </div>
 
             <div className="field">
-              <label htmlFor="session-status">Status</label>
+              <label htmlFor="session-status">{t('common.status')}</label>
               <select id="session-status" value={form.status} onChange={handleChange('status')}>
-                <option value={0}>Planned</option>
-                <option value={1}>Completed</option>
-                <option value={2}>Cancelled</option>
-                <option value={3}>No show</option>
+                <option value={0}>{t('status.planned')}</option>
+                <option value={1}>{t('status.completed')}</option>
+                <option value={2}>{t('status.cancelled')}</option>
+                <option value={3}>{t('status.noShow')}</option>
               </select>
             </div>
 
             <div className="field">
-              <label htmlFor="session-notes">Notes</label>
+              <label htmlFor="session-notes">{t('common.notes')}</label>
               <textarea id="session-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
             </div>
 
             <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : mode === 'edit' ? 'Save changes' : 'Create session'}
+              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('sessions.submitAdd')}
             </button>
           </form>
         )}

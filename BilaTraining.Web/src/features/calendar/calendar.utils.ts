@@ -1,25 +1,31 @@
+import type { TranslationKey } from '../../i18n';
 import type { SessionStatus } from '../../shared/models';
 
-export function sessionStatusLabel(status: SessionStatus): string {
+type StatusTranslationKey = Extract<TranslationKey, 'status.planned' | 'status.completed' | 'status.cancelled' | 'status.noShow' | 'status.unknown'>;
+
+export function sessionStatusLabel(status: SessionStatus, t?: (key: StatusTranslationKey) => string): string {
   switch (status) {
     case 0:
-      return 'Planned';
+      return t ? t('status.planned') : 'Planned';
     case 1:
-      return 'Completed';
+      return t ? t('status.completed') : 'Completed';
     case 2:
-      return 'Cancelled';
+      return t ? t('status.cancelled') : 'Cancelled';
     case 3:
-      return 'No show';
+      return t ? t('status.noShow') : 'No show';
     default:
-      return 'Unknown';
+      return t ? t('status.unknown') : 'Unknown';
   }
 }
 
-export function formatSessionWindow(startAtUtc: string, endAtUtc: string): string {
+export function formatSessionWindow(startAtUtc: string, endAtUtc: string, locale = 'en-US'): string {
   const start = new Date(startAtUtc);
   const end = new Date(endAtUtc);
+  const startDate = start.toLocaleDateString(locale);
+  const startTime = start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const endTime = end.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
-  return `${start.toLocaleString()} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  return `${startDate}, ${startTime} - ${endTime}`;
 }
 
 export function toDateTimeLocalValue(value: string): string {
@@ -82,6 +88,6 @@ export function extractTime(value: string): string | null {
   return value.slice(11, 16);
 }
 
-export function formatTimeShort(value: string): string {
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+export function formatTimeShort(value: string, locale = 'en-US'): string {
+  return new Date(value).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }

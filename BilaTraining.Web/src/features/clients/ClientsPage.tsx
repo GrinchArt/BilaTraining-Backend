@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } fr
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 import { getJson, sendJson, sendVoid, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import type { Client } from '../../shared/models';
@@ -24,6 +25,7 @@ const emptyForm: ClientFormState = {
 
 export function ClientsPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
@@ -38,14 +40,14 @@ export function ClientsPage() {
 
     try {
       const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
-      const data = await getJson<Client[]>(`${apiBaseUrl}/clients${query}`, authenticatedFetch, 'Failed to load clients.');
+      const data = await getJson<Client[]>(`${apiBaseUrl}/clients${query}`, authenticatedFetch, t('clients.loadFailed'));
       setClients(data);
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authenticatedFetch, search]);
+  }, [apiBaseUrl, authenticatedFetch, search, t]);
 
   useEffect(() => {
     void loadClients();
@@ -86,7 +88,7 @@ export function ClientsPage() {
     setErrorMessage('');
 
     try {
-      await sendVoid(`${apiBaseUrl}/clients/${client.id}`, 'DELETE', authenticatedFetch, 'Failed to delete client.');
+      await sendVoid(`${apiBaseUrl}/clients/${client.id}`, 'DELETE', authenticatedFetch, t('clients.deleteFailed'));
       await loadClients();
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -99,14 +101,8 @@ export function ClientsPage() {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Clients</p>
-          <h2>Clients</h2>
-          <p>Browse clients first, then open a dedicated screen to create or edit contact details.</p>
-        </div>
-        <div className="calendar-toolbar">
-          <button type="button" className="button" aria-label="Add client" onClick={() => navigate('/clients/new')}>
-            +
-          </button>
+          <p className="feature-page__eyebrow">{t('nav.clients')}</p>
+          <h2>{t('clients.title')}</h2>
         </div>
       </div>
 
@@ -115,50 +111,55 @@ export function ClientsPage() {
       <div className="exercise-page__grid exercise-page__grid--single">
         <section className="card">
           <div className="exercise-page__section-header">
-            <h3>Client list</h3>
-            <span className="exercise-page__count">{clients.length}</span>
+            <h3>{t('clients.list')}</h3>
+            <div className="exercise-page__section-actions">
+              <span className="exercise-page__count">{clients.length}</span>
+              <button type="button" className="exercise-page__count-button" aria-label={t('clients.add')} onClick={() => navigate('/clients/new')}>
+                +
+              </button>
+            </div>
           </div>
 
           <div className="field">
-            <label htmlFor="client-search">Search</label>
-            <input id="client-search" type="search" placeholder="Name, email, or phone" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <label htmlFor="client-search">{t('common.search')}</label>
+            <input id="client-search" type="search" placeholder={t('clients.searchPlaceholder')} value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
 
-          {isLoading ? <p className="exercise-page__state">Loading clients...</p> : null}
+          {isLoading ? <p className="exercise-page__state">{t('clients.loading')}</p> : null}
           {!isLoading && clients.length === 0 ? (
-            <p className="exercise-page__state">{search.trim() ? 'No clients match the current search.' : 'No clients yet.'}</p>
+            <p className="exercise-page__state">{search.trim() ? t('clients.emptySearch') : t('clients.empty')}</p>
           ) : null}
           {!isLoading && clients.length > 0 ? (
             <div className="data-table data-table--clients">
               <div className="data-table__header" aria-hidden="true">
-                <span>Client</span>
-                <span>Phone</span>
-                <span>Email</span>
-                <span>Notes</span>
+                <span>{t('common.client')}</span>
+                <span>{t('common.phone')}</span>
+                <span>{t('common.email')}</span>
+                <span>{t('common.notes')}</span>
                 <span></span>
               </div>
               {clients.map((client) => (
                 <article key={client.id} className="data-table__row">
-                  <div className="data-table__cell" data-label="Client">
+                  <div className="data-table__cell" data-label={t('common.client')}>
                     <div className="data-table__primary">
                       <strong>{formatClientName(client)}</strong>
                     </div>
                   </div>
-                  <div className="data-table__cell" data-label="Phone">
-                    <span className={client.phone ? 'data-table__mono' : 'exercise-item__muted'}>{client.phone ?? 'No phone'}</span>
+                  <div className="data-table__cell" data-label={t('common.phone')}>
+                    <span className={client.phone ? 'data-table__mono' : 'exercise-item__muted'}>{client.phone ?? t('common.noPhone')}</span>
                   </div>
-                  <div className="data-table__cell" data-label="Email">
-                    <span>{client.email ?? 'No email'}</span>
+                  <div className="data-table__cell" data-label={t('common.email')}>
+                    <span>{client.email ?? t('common.noEmail')}</span>
                   </div>
-                  <div className="data-table__cell" data-label="Notes">
-                    <span className={client.notes ? undefined : 'exercise-item__muted'}>{client.notes ?? 'No notes.'}</span>
+                  <div className="data-table__cell" data-label={t('common.notes')}>
+                    <span className={client.notes ? undefined : 'exercise-item__muted'}>{client.notes ?? t('common.noNotes')}</span>
                   </div>
                   <div className="data-table__cell data-table__cell--actions">
                     <div className="data-table__menu">
                       <button
                         type="button"
                         className="data-table__menu-trigger"
-                        aria-label={`Open actions for ${formatClientName(client)}`}
+                        aria-label={t('clients.openActions', { name: formatClientName(client) })}
                         aria-expanded={openMenuId === client.id}
                         onClick={() => setOpenMenuId((current) => (current === client.id ? null : client.id))}
                       >
@@ -174,10 +175,10 @@ export function ClientsPage() {
                               navigate(`/clients/${client.id}/edit`);
                             }}
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button type="button" className="data-table__menu-item data-table__menu-item--danger" disabled={isDeletingId === client.id} onClick={() => void handleDelete(client)}>
-                            {isDeletingId === client.id ? 'Deleting...' : 'Delete'}
+                            {isDeletingId === client.id ? t('common.deleting') : t('common.delete')}
                           </button>
                         </div>
                       ) : null}
@@ -195,6 +196,7 @@ export function ClientsPage() {
 
 export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { clientId } = useParams<{ clientId: string }>();
   const [form, setForm] = useState<ClientFormState>(emptyForm);
@@ -215,7 +217,7 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
       setErrorMessage('');
 
       try {
-        const clients = await getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.');
+        const clients = await getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed'));
 
         if (!isActive) {
           return;
@@ -224,7 +226,7 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
         const client = clients.find((item) => item.id === clientId);
 
         if (!client) {
-          setErrorMessage('Client not found.');
+          setErrorMessage(t('clients.notFound'));
           return;
         }
 
@@ -251,7 +253,7 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
     return () => {
       isActive = false;
     };
-  }, [apiBaseUrl, authenticatedFetch, clientId, mode]);
+  }, [apiBaseUrl, authenticatedFetch, clientId, mode, t]);
 
   const handleChange =
     (field: keyof ClientFormState) =>
@@ -266,7 +268,7 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
     event.preventDefault();
 
     if (!form.firstName.trim()) {
-      setErrorMessage('First name is required.');
+      setErrorMessage(t('clients.firstNameRequired'));
       return;
     }
 
@@ -283,9 +285,9 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
     try {
       if (mode === 'edit' && clientId) {
-        await sendJson(`${apiBaseUrl}/clients/${clientId}`, 'PUT', authenticatedFetch, payload, 'Failed to update client.');
+        await sendJson(`${apiBaseUrl}/clients/${clientId}`, 'PUT', authenticatedFetch, payload, t('clients.updateFailed'));
       } else {
-        await sendJson(`${apiBaseUrl}/clients`, 'POST', authenticatedFetch, payload, 'Failed to create client.');
+        await sendJson(`${apiBaseUrl}/clients`, 'POST', authenticatedFetch, payload, t('clients.createFailed'));
       }
 
       navigate('/clients');
@@ -300,12 +302,12 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
     <section className="exercise-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Clients</p>
-          <h2>{mode === 'edit' ? 'Edit client' : 'Add client'}</h2>
-          <p>{mode === 'edit' ? 'Update client details on a separate page.' : 'Create a new client on a dedicated page.'}</p>
+          <p className="feature-page__eyebrow">{t('nav.clients')}</p>
+          <h2>{mode === 'edit' ? t('clients.editTitle') : t('clients.addTitle')}</h2>
+          <p>{mode === 'edit' ? t('clients.editDescription') : t('clients.addDescription')}</p>
         </div>
         <button type="button" className="button button--secondary" onClick={() => navigate('/clients')}>
-          Back
+          {t('common.back')}
         </button>
       </div>
 
@@ -313,36 +315,36 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
       <section className="card calendar-day-panel">
         {isLoading ? (
-          <p className="exercise-page__state">Loading form...</p>
+          <p className="exercise-page__state">{t('common.loadingForm')}</p>
         ) : (
           <form className="exercise-form" onSubmit={handleSubmit}>
             <div className="field">
-              <label htmlFor="client-firstName">First name</label>
+              <label htmlFor="client-firstName">{t('common.firstName')}</label>
               <input id="client-firstName" type="text" value={form.firstName} onChange={handleChange('firstName')} />
             </div>
 
             <div className="field">
-              <label htmlFor="client-lastName">Last name</label>
+              <label htmlFor="client-lastName">{t('common.lastName')}</label>
               <input id="client-lastName" type="text" value={form.lastName} onChange={handleChange('lastName')} />
             </div>
 
             <div className="field">
-              <label htmlFor="client-phone">Phone</label>
+              <label htmlFor="client-phone">{t('common.phone')}</label>
               <input id="client-phone" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={handleChange('phone')} />
             </div>
 
             <div className="field">
-              <label htmlFor="client-email">Email</label>
+              <label htmlFor="client-email">{t('common.email')}</label>
               <input id="client-email" type="email" autoComplete="email" value={form.email} onChange={handleChange('email')} />
             </div>
 
             <div className="field">
-              <label htmlFor="client-notes">Notes</label>
+              <label htmlFor="client-notes">{t('common.notes')}</label>
               <textarea id="client-notes" rows={4} value={form.notes} onChange={handleChange('notes')} />
             </div>
 
             <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : mode === 'edit' ? 'Save changes' : 'Add client'}
+              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('clients.submitAdd')}
             </button>
           </form>
         )}

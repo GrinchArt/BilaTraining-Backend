@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
+import { type TranslationKey, useI18n } from '../../i18n';
 import { getJson, sendPatch, sendVoid, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
-import { formatTimeShort, parseDayKey, sessionStatusLabel, startOfDay, toDayKey } from './calendar.utils';
+import { formatTimeShort, parseDayKey, startOfDay, toDayKey } from './calendar.utils';
 
 const HOUR_SLOT_HEIGHT = 72;
 const MINUTES_IN_DAY = 24 * 60;
@@ -19,8 +20,9 @@ type TimelineSession = {
   endMinute: number;
   top: number;
   height: number;
-  left: string;
-  width: string;
+  left: number;
+  width: number;
+  zIndex: number;
 };
 
 type TimelineSeed = {
@@ -31,10 +33,9 @@ type TimelineSeed = {
   endMinute: number;
 };
 
-const STATUS_OPTIONS: SessionStatus[] = [0, 1, 2, 3];
-
 export function CalendarDayPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
   const { dayKey } = useParams<{ dayKey: string }>();
   const selectedDay = useMemo(() => parseDayKey(dayKey) ?? startOfDay(new Date()), [dayKey]);
@@ -58,9 +59,9 @@ export function CalendarDayPage() {
 
     try {
       const [nextSessions, nextClients, nextWorkspaces] = await Promise.all([
-        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, 'Failed to load sessions.'),
-        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, 'Failed to load clients.'),
-        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, 'Failed to load workspaces.'),
+        getJson<Session[]>(`${apiBaseUrl}/sessions`, authenticatedFetch, t('sessions.loadFailed')),
+        getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
       ]);
 
       setSessions(nextSessions);
@@ -71,7 +72,7 @@ export function CalendarDayPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authenticatedFetch]);
+  }, [apiBaseUrl, authenticatedFetch, t]);
 
   useEffect(() => {
     void loadDay();
@@ -86,8 +87,8 @@ export function CalendarDayPage() {
   );
 
   const timelineSessions = useMemo(
-    () => buildTimelineSessions(selectedDaySessions, selectedDay, clientById, workspaceById),
-    [clientById, selectedDay, selectedDaySessions, workspaceById],
+    () => buildTimelineSessions(selectedDaySessions, selectedDay, clientById, workspaceById, t),
+    [clientById, selectedDay, selectedDaySessions, t, workspaceById],
   );
 
   const activeTimelineSession = useMemo(
@@ -140,7 +141,7 @@ export function CalendarDayPage() {
         `${apiBaseUrl}/sessions/${session.id}/status`,
         authenticatedFetch,
         { status },
-        'Failed to update session status.',
+        t('calendar.updateStatusFailed'),
       );
 
       setSessions((current) =>
@@ -160,8 +161,14 @@ export function CalendarDayPage() {
     }
   };
 
+  const handleStatusSelect =
+    (session: Session) =>
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      void handleStatusChange(session, Number(event.target.value) as SessionStatus);
+    };
+
   const handleDelete = async (session: Session) => {
-    if (!window.confirm('Delete this session?')) {
+    if (!window.confirm(t('calendar.deleteSessionConfirm'))) {
       return;
     }
 
@@ -169,7 +176,7 @@ export function CalendarDayPage() {
     setErrorMessage('');
 
     try {
-      await sendVoid(`${apiBaseUrl}/sessions/${session.id}`, 'DELETE', authenticatedFetch, 'Failed to delete session.');
+      await sendVoid(`${apiBaseUrl}/sessions/${session.id}`, 'DELETE', authenticatedFetch, t('calendar.deleteFailed'));
       setSessions((current) => current.filter((item) => item.id !== session.id));
       setActiveSessionId(null);
     } catch (error) {
@@ -183,18 +190,18 @@ export function CalendarDayPage() {
     <section className="calendar-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">Calendar Day</p>
-          <h2>{selectedDay.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
-          <p>Use the timeline to review overlapping sessions, then tap one to change status, edit it, or delete it.</p>
+          <p className="feature-page__eyebrow">{t('calendar.dayEyebrow')}</p>
+          <h2>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+          <p>{t('calendar.dayDescription')}</p>
         </div>
         <div className="calendar-toolbar">
           <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
-            Back
+            {t('common.back')}
           </button>
           <button
             type="button"
             className="button"
-            aria-label="Add session"
+            aria-label={t('calendar.addSession')}
             onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/new`)}
           >
             +
@@ -208,15 +215,15 @@ export function CalendarDayPage() {
         <section className="card calendar-day-panel calendar-day-panel--timeline">
           <div className="exercise-page__section-header">
             <div>
-              <h3>Sessions</h3>
-              <p className="calendar-day-panel__caption">Day view with overlapping sessions placed side by side.</p>
+              <h3>{t('calendar.sessionsTitle')}</h3>
+              <p className="calendar-day-panel__caption">{t('calendar.sessionsCaption')}</p>
             </div>
             <span className="exercise-page__count">{selectedDaySessions.length}</span>
           </div>
 
-          {isLoading ? <p className="exercise-page__state">Loading sessions...</p> : null}
+          {isLoading ? <p className="exercise-page__state">{t('calendar.loadingSessions')}</p> : null}
           {!isLoading && selectedDaySessions.length === 0 ? (
-            <p className="exercise-page__state">No sessions yet. Add the first one for this day.</p>
+            <p className="exercise-page__state">{t('calendar.emptyDay')}</p>
           ) : null}
           {!isLoading && selectedDaySessions.length > 0 ? (
             <div ref={timelineScrollerRef} className="calendar-timeline__scroller">
@@ -249,20 +256,14 @@ export function CalendarDayPage() {
                       className={`calendar-session-block calendar-session-block--${item.session.status}`}
                       style={{
                         top: `${item.top}px`,
-                        left: item.left,
-                        width: item.width,
+                        left: `${item.left}px`,
+                        width: `calc(100% - ${item.width}px)`,
                         height: `${item.height}px`,
+                        zIndex: item.zIndex,
                       }}
                       onClick={() => setActiveSessionId(item.session.id)}
                     >
-                      <span className="calendar-session-block__time">
-                        {formatTimeShort(item.session.startAtUtc)} - {formatTimeShort(item.session.endAtUtc)}
-                      </span>
                       <strong>{item.clientName}</strong>
-                      <span>{item.workspaceName}</span>
-                      <span className={`exercise-item__tag calendar-status-tag calendar-status-tag--${item.session.status}`}>
-                        {sessionStatusLabel(item.session.status)}
-                      </span>
                     </button>
                   ))}
                 </div>
@@ -277,19 +278,19 @@ export function CalendarDayPage() {
           <button
             type="button"
             className="calendar-session-modal__scrim"
-            aria-label="Close session details"
+            aria-label={t('calendar.closeDetails')}
             onClick={() => setActiveSessionId(null)}
           />
 
           <section className="card calendar-session-modal__card">
             <div className="calendar-session-modal__header">
               <div>
-                <p className="feature-page__eyebrow">Session</p>
+                <p className="feature-page__eyebrow">{t('common.session')}</p>
                 <h3 id="calendar-session-modal-title">{activeTimelineSession.clientName}</h3>
                 <p className="calendar-session-modal__meta">
                   {activeTimelineSession.workspaceName}
                   {' / '}
-                  {formatTimeShort(activeTimelineSession.session.startAtUtc)} - {formatTimeShort(activeTimelineSession.session.endAtUtc)}
+                  {formatTimeShort(activeTimelineSession.session.startAtUtc, locale)} - {formatTimeShort(activeTimelineSession.session.endAtUtc, locale)}
                 </p>
               </div>
 
@@ -297,8 +298,8 @@ export function CalendarDayPage() {
                 <div className="calendar-session-modal__menu">
                   <button
                     type="button"
-                    className="button button--secondary calendar-session-modal__menu-trigger"
-                    aria-label="Open session actions"
+                    className="button button--secondary calendar-session-modal__icon-button calendar-session-modal__menu-trigger"
+                    aria-label={t('calendar.openSessionActions')}
                     onClick={() => setIsActionMenuOpen((current) => !current)}
                   >
                     ...
@@ -311,7 +312,7 @@ export function CalendarDayPage() {
                         className="calendar-session-modal__menu-item"
                         onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/${activeTimelineSession.session.id}`)}
                       >
-                        Edit
+                        {t('common.edit')}
                       </button>
                       <button
                         type="button"
@@ -319,7 +320,7 @@ export function CalendarDayPage() {
                         disabled={isDeletingId === activeTimelineSession.session.id}
                         onClick={() => void handleDelete(activeTimelineSession.session)}
                       >
-                        {isDeletingId === activeTimelineSession.session.id ? 'Deleting...' : 'Delete'}
+                        {isDeletingId === activeTimelineSession.session.id ? t('common.deleting') : t('common.delete')}
                       </button>
                     </div>
                   ) : null}
@@ -327,54 +328,38 @@ export function CalendarDayPage() {
 
                 <button
                   type="button"
-                  className="button button--secondary calendar-session-modal__close"
+                  className="button button--secondary calendar-session-modal__icon-button calendar-session-modal__close"
                   onClick={() => setActiveSessionId(null)}
+                  aria-label={t('calendar.closeDetails')}
                 >
-                  Close
+                  x
                 </button>
               </div>
             </div>
 
             <div className="calendar-session-modal__body">
               <div className="calendar-session-modal__status-group">
-                <p className="calendar-session-modal__label">Status</p>
-                <div className="calendar-session-modal__status-options">
-                  {STATUS_OPTIONS.map((status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      className={`calendar-session-modal__status-option calendar-status-tag calendar-status-tag--${status}${
-                        activeTimelineSession.session.status === status ? ' is-active' : ''
-                      }`}
-                      disabled={isSavingStatusId === activeTimelineSession.session.id}
-                      onClick={() => void handleStatusChange(activeTimelineSession.session, status)}
-                    >
-                      {sessionStatusLabel(status)}
-                    </button>
-                  ))}
+                <p className="calendar-session-modal__label">{t('common.status')}</p>
+                <div className="field">
+                  <select
+                    value={activeTimelineSession.session.status}
+                    disabled={isSavingStatusId === activeTimelineSession.session.id}
+                    onChange={handleStatusSelect(activeTimelineSession.session)}
+                  >
+                    <option value={0}>{t('status.planned')}</option>
+                    <option value={1}>{t('status.completed')}</option>
+                    <option value={2}>{t('status.cancelled')}</option>
+                    <option value={3}>{t('status.noShow')}</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="calendar-session-modal__details">
-                <div>
-                  <p className="calendar-session-modal__label">Client</p>
-                  <p>{activeTimelineSession.clientName}</p>
+              {activeTimelineSession.session.notes?.trim() ? (
+                <div className="calendar-session-modal__notes">
+                  <p className="calendar-session-modal__label">{t('common.notes')}</p>
+                  <p>{activeTimelineSession.session.notes}</p>
                 </div>
-                <div>
-                  <p className="calendar-session-modal__label">Workspace</p>
-                  <p>{activeTimelineSession.workspaceName}</p>
-                </div>
-                <div>
-                  <p className="calendar-session-modal__label">Time</p>
-                  <p>
-                    {formatTimeShort(activeTimelineSession.session.startAtUtc)} - {formatTimeShort(activeTimelineSession.session.endAtUtc)}
-                  </p>
-                </div>
-                <div>
-                  <p className="calendar-session-modal__label">Notes</p>
-                  <p>{activeTimelineSession.session.notes?.trim() ? activeTimelineSession.session.notes : 'No notes.'}</p>
-                </div>
-              </div>
+              ) : null}
             </div>
           </section>
         </div>
@@ -388,6 +373,7 @@ function buildTimelineSessions(
   selectedDay: Date,
   clientById: Map<string, Client>,
   workspaceById: Map<string, Workspace>,
+  t: (key: TranslationKey) => string,
 ): TimelineSession[] {
   const dayStart = startOfDay(selectedDay).getTime();
   const rawSessions = sessions.map((session) => {
@@ -399,8 +385,8 @@ function buildTimelineSessions(
 
     return {
       session,
-      clientName: client ? formatClientName(client) : 'Unknown client',
-      workspaceName: workspace?.name ?? 'Unknown workspace',
+      clientName: client ? formatClientName(client) : t('common.unknownClient'),
+      workspaceName: workspace?.name ?? t('common.unknownWorkspace'),
       startMinute,
       endMinute: safeEndMinute,
     };
@@ -410,19 +396,20 @@ function buildTimelineSessions(
 
   return groups.flatMap((group) => {
     const laidOut = assignColumns(group);
-    const totalColumns = Math.max(...laidOut.map((item) => item.column + 1), 1);
+    const maxOverlapColumn = Math.max(...laidOut.map((item) => item.column), 0);
 
     return laidOut.map((item) => {
-      const width = `calc(${100 / totalColumns}% - 6px)`;
-      const left = `calc(${(100 / totalColumns) * item.column}% + 3px)`;
       const durationMinutes = item.endMinute - item.startMinute;
+      const overlapOffset = Math.min(item.column, 3) * 18 + 4;
+      const reservedRightSpace = Math.min(maxOverlapColumn, 3) * 18 + 8;
 
       return {
         ...item,
         top: (item.startMinute / 60) * HOUR_SLOT_HEIGHT,
         height: Math.max((durationMinutes / 60) * HOUR_SLOT_HEIGHT, 56),
-        left,
-        width,
+        left: overlapOffset,
+        width: reservedRightSpace,
+        zIndex: item.column + 1,
       };
     });
   });

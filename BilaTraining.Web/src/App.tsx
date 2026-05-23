@@ -12,6 +12,7 @@ import { ExerciseFormPage, ExercisesPage as ExercisesRoutePage } from './feature
 import { ReportsPage as ReportsRoutePage } from './features/reports/ReportsPage';
 import { SessionFormPage, SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
 import { WorkspaceFormPage, WorkspacesPage as WorkspacesRoutePage } from './features/workspaces/WorkspacesPage';
+import { useI18n } from './i18n';
 import { toMessage } from './shared/api';
 
 function App() {
@@ -185,6 +186,7 @@ function LandingPage() {
 function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -194,7 +196,7 @@ function LoginPage() {
     event.preventDefault();
 
     if (!email.trim() || !password) {
-      setErrorMessage('Enter a valid email address and password.');
+      setErrorMessage(t('auth.loginValidation'));
       return;
     }
 
@@ -213,13 +215,13 @@ function LoginPage() {
 
   return (
     <section className="card auth-card">
-      <p className="kicker">Auth</p>
-      <h2>Login</h2>
-      <p>Use the same account you already tested through Postman.</p>
+      <p className="kicker">{t('auth.eyebrow')}</p>
+      <h2>{t('auth.loginTitle')}</h2>
+      <p>{t('auth.loginDescription')}</p>
 
       <form onSubmit={submit}>
         <div className="field">
-          <label htmlFor="login-email">Email</label>
+          <label htmlFor="login-email">{t('common.email')}</label>
           <input
             id="login-email"
             type="email"
@@ -230,7 +232,7 @@ function LoginPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="login-password">Password</label>
+          <label htmlFor="login-password">{t('auth.password')}</label>
           <input
             id="login-password"
             type="password"
@@ -243,14 +245,14 @@ function LoginPage() {
         {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
         <button className="submit-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in...' : 'Login'}
+          {isSubmitting ? t('auth.loginSubmitting') : t('auth.loginSubmit')}
         </button>
       </form>
 
       <p className="hint">
-        Need an account?{' '}
+        {t('auth.needAccount')}{' '}
         <NavLink to="/auth/register" className="switch-link">
-          Create one here
+          {t('auth.createAccountLink')}
         </NavLink>
       </p>
     </section>
@@ -260,6 +262,7 @@ function LoginPage() {
 function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { t } = useI18n();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -270,7 +273,7 @@ function RegisterPage() {
     event.preventDefault();
 
     if (!email.trim() || password.length < 6 || !/\d/.test(password)) {
-      setErrorMessage('Use a valid email and a password with at least 6 characters and one number.');
+      setErrorMessage(t('auth.registerValidation'));
       return;
     }
 
@@ -293,13 +296,13 @@ function RegisterPage() {
 
   return (
     <section className="card auth-card">
-      <p className="kicker">Auth</p>
-      <h2>Register</h2>
-      <p>Create a local account backed by ASP.NET Core Identity.</p>
+      <p className="kicker">{t('auth.eyebrow')}</p>
+      <h2>{t('auth.registerTitle')}</h2>
+      <p>{t('auth.registerDescription')}</p>
 
       <form onSubmit={submit}>
         <div className="field">
-          <label htmlFor="register-displayName">Display name</label>
+          <label htmlFor="register-displayName">{t('auth.displayName')}</label>
           <input
             id="register-displayName"
             type="text"
@@ -310,7 +313,7 @@ function RegisterPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="register-email">Email</label>
+          <label htmlFor="register-email">{t('common.email')}</label>
           <input
             id="register-email"
             type="email"
@@ -321,7 +324,7 @@ function RegisterPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="register-password">Password</label>
+          <label htmlFor="register-password">{t('auth.password')}</label>
           <input
             id="register-password"
             type="password"
@@ -334,14 +337,14 @@ function RegisterPage() {
         {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
         <button className="submit-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating account...' : 'Register'}
+          {isSubmitting ? t('auth.registerSubmitting') : t('auth.registerSubmit')}
         </button>
       </form>
 
       <p className="hint">
-        Already registered?{' '}
+        {t('auth.alreadyRegistered')}{' '}
         <NavLink to="/auth/login" className="switch-link">
-          Go to login
+          {t('auth.goToLogin')}
         </NavLink>
       </p>
     </section>

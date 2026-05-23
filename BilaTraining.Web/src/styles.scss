@@ -262,6 +262,34 @@ a {
   gap: 10px;
 }
 
+.shell__locale {
+  display: grid;
+  gap: 8px;
+}
+
+.shell__locale-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shell__locale-button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(68, 81, 119, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
+.shell__locale-button.is-active {
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
+  border-color: rgba(92, 143, 255, 0.88);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(13, 50, 137, 0.28);
+}
+
 .shell__drawer-footer {
   margin-top: auto;
 }
@@ -465,6 +493,12 @@ a {
   margin-bottom: 16px;
 }
 
+.exercise-page__section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .exercise-page__count {
   display: inline-flex;
   align-items: center;
@@ -477,6 +511,23 @@ a {
   background: rgba(10, 16, 30, 0.92);
   color: #9fb5ff;
   font-weight: 600;
+}
+
+.exercise-page__count-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(92, 143, 255, 0.52);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 10px 18px rgba(13, 50, 137, 0.24);
 }
 
 .exercise-list {
@@ -1239,7 +1290,7 @@ a {
   position: absolute;
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1250,23 +1301,14 @@ a {
   overflow: hidden;
 }
 
-.calendar-session-block strong,
-.calendar-session-block span {
+.calendar-session-block strong {
+  display: -webkit-box;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.calendar-session-block__time {
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.calendar-session-block .exercise-item__tag {
-  justify-self: start;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.05;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .calendar-session-block--0 {
@@ -1301,8 +1343,8 @@ a {
 .calendar-session-modal__card {
   position: relative;
   z-index: 1;
-  width: min(100%, 560px);
-  padding: 20px;
+  width: min(100%, 420px);
+  padding: 18px;
 }
 
 .calendar-session-modal__header {
@@ -1326,7 +1368,7 @@ a {
 
 .calendar-session-modal__header-actions {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 
@@ -1334,9 +1376,13 @@ a {
   position: relative;
 }
 
-.calendar-session-modal__menu-trigger,
-.calendar-session-modal__close {
+.calendar-session-modal__icon-button {
   min-width: 0;
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .calendar-session-modal__menu-popover {
@@ -1371,8 +1417,8 @@ a {
 
 .calendar-session-modal__body {
   display: grid;
-  gap: 18px;
-  margin-top: 18px;
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .calendar-session-modal__label {
@@ -1384,36 +1430,17 @@ a {
 
 .calendar-session-modal__status-group {
   display: grid;
-  gap: 10px;
-}
-
-.calendar-session-modal__status-options {
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px;
 }
 
-.calendar-session-modal__status-option {
-  min-height: 36px;
-  padding: 0 12px;
-}
-
-.calendar-session-modal__status-option.is-active {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
-}
-
-.calendar-session-modal__details {
-  display: grid;
-  gap: 14px;
-}
-
-.calendar-session-modal__details > div {
+.calendar-session-modal__notes {
   display: grid;
   gap: 4px;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+}
+
+.calendar-session-modal__notes p:last-child {
+  margin: 0;
+  color: var(--text-soft);
 }
 
 .calendar-form__times {
@@ -1496,6 +1523,28 @@ a {
     justify-content: space-between;
   }
 
+  .calendar-day-panel {
+    padding: 12px;
+  }
+
+  .calendar-timeline__scroller {
+    margin-top: 12px;
+    margin-right: -4px;
+    padding-right: 0;
+  }
+
+  .calendar-timeline {
+    padding-left: 48px;
+  }
+
+  .calendar-timeline__axis {
+    width: 42px;
+  }
+
+  .calendar-timeline__axis-label {
+    font-size: 11px;
+  }
+
   .reports-toolbar,
   .reports-range-nav {
     align-items: stretch;
@@ -1516,18 +1565,74 @@ a {
   }
 
   .calendar-session-block {
-    padding: 8px 10px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.2);
+  }
+
+  .calendar-session-block strong {
+    font-size: 13px;
+    line-height: 1.02;
+    -webkit-line-clamp: 2;
   }
 
   .calendar-session-modal__header,
   .calendar-session-modal__header-actions {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .calendar-session-modal__card {
+    width: min(100%, 332px);
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .calendar-session-modal__header {
+    gap: 10px;
+  }
+
+  .calendar-session-modal__header h3 {
+    font-size: 18px;
+    line-height: 1.08;
+  }
+
+  .calendar-session-modal__meta {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .calendar-session-modal__header-actions {
+    gap: 6px;
+  }
+
+  .calendar-session-modal__icon-button {
+    width: 38px;
+    min-height: 38px;
+    font-size: 20px;
+    border-radius: 9px;
+  }
+
+  .calendar-session-modal__body {
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .calendar-session-modal__status-group .field select {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 15px;
+  }
+
+  .calendar-session-modal__notes p:last-child {
+    font-size: 14px;
+    line-height: 1.35;
   }
 
   .calendar-session-modal__menu-popover {
-    left: 0;
-    right: auto;
+    left: auto;
+    right: 0;
+    min-width: 132px;
   }
 
   .data-table__header {
@@ -1597,5 +1702,28 @@ a {
 
   .calendar-day__more {
     font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .calendar-timeline {
+    padding-left: 44px;
+  }
+
+  .calendar-timeline__axis {
+    width: 38px;
+  }
+
+  .calendar-session-block {
+    padding: 6px 7px;
+  }
+
+  .calendar-session-block strong {
+    font-size: 12px;
+  }
+
+  .calendar-session-modal__card {
+    width: min(100%, 316px);
+    padding: 12px;
   }
 }
