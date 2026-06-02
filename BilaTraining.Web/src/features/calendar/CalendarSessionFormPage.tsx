@@ -7,6 +7,7 @@ import { getJson, sendJson, sendPatch, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
 import { combineDayAndTime, extractTime, parseDayKey, startOfDay, toDateTimeLocalValue, toDayKey } from './calendar.utils';
+import { getScheduleAnchorDay, getSelectableScheduleDays, syncSelectedDayKeys, type SessionScheduleMode } from '../sessions/sessionSchedule';
 
 export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
@@ -20,6 +21,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [scheduleMode, setScheduleMode] = useState<SessionScheduleMode>('single');
   const createStartAtLocal = useMemo(() => combineDayAndTime(selectedDay, '09:00'), [selectedDay]);
   const createEndAtLocal = useMemo(() => combineDayAndTime(selectedDay, '10:00'), [selectedDay]);
   const [form, setForm] = useState<{
@@ -37,6 +39,9 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     notes: '',
     status: 0,
   });
+  const anchorDay = useMemo(() => getScheduleAnchorDay(form.startAtLocal, selectedDay), [form.startAtLocal, selectedDay]);
+  const selectableDays = useMemo(() => getSelectableScheduleDays(scheduleMode, anchorDay), [anchorDay, scheduleMode]);
+  const [selectedDayKeys, setSelectedDayKeys] = useState<string[]>(() => [toDayKey(selectedDay)]);
 
   useEffect(() => {
     let isActive = true;
@@ -127,6 +132,14 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
     });
   }, [mode, selectedDay]);
 
+  useEffect(() => {
+    if (mode !== 'create') {
+      return;
+    }
+
+    setSelectedDayKeys((current) => syncSelectedDayKeys(scheduleMode, anchorDay, current));
+  }, [anchorDay, mode, scheduleMode]);
+
   const handleChange =
     (field: keyof typeof form) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       const value = field === 'status' ? Number(event.target.value) : event.target.value;
@@ -137,11 +150,26 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
       }));
     };
 
+  const handleToggleDay = (dayKey: string) => {
+    if (scheduleMode === 'single') {
+      return;
+    }
+
+    setSelectedDayKeys((current) =>
+      current.includes(dayKey) ? current.filter((item) => item !== dayKey) : [...current, dayKey],
+    );
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!form.workspaceId || !form.clientId || !form.startAtLocal || !form.endAtLocal) {
       setErrorMessage(t('calendar.formRequired'));
+      return;
+    }
+
+    if (mode === 'create' && scheduleMode !== 'single' && selectedDayKeys.length === 0) {
+      setErrorMessage(t('sessions.scheduleDatesRequired'));
       return;
     }
 
@@ -155,6 +183,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
         notes: form.notes.trim() || null,
         startAtUtc: new Date(form.startAtLocal).toISOString(),
         endAtUtc: new Date(form.endAtLocal).toISOString(),
+        status: form.status,
       };
 
       if (mode === 'edit' && editingSession) {
@@ -175,13 +204,44 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
           );
         }
       } else {
-        await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, t('calendar.createFailed'));
+        if (scheduleMode === 'single') {
+          await sendJson(`${apiBaseUrl}/sessions`, 'POST', authenticatedFetch, payload, t('calendar.createFailed'));
+        } else {
+          const startTime = extractTime(form.startAtLocal);
+          const endTime = extractTime(form.endAtLocal);
+
+          if (!startTime || !endTime) {
+            throw new Error(t('calendar.formRequired'));
+          }
+
+          const selectedKeys = new Set(selectedDayKeys);
+          const sessions = selectableDays
+            .filter((day) => selectedKeys.has(toDayKey(day)))
+            .map((day) => ({
+              startAtUtc: new Date(combineDayAndTime(day, startTime)).toISOString(),
+              endAtUtc: new Date(combineDayAndTime(day, endTime)).toISOString(),
+            }));
+
+          await sendJson(
+            `${apiBaseUrl}/sessions/bulk`,
+            'POST',
+            authenticatedFetch,
+            {
+              workspaceId: form.workspaceId,
+              clientId: form.clientId,
+              notes: form.notes.trim() || null,
+              status: form.status,
+              sessions,
+            },
+            t('calendar.createFailed'),
+          );
+        }
       }
 
       if (window.history.length > 1) {
         navigate(-1);
       } else {
-        navigate(`/calendar/day/${toDayKey(selectedDay)}`);
+        navigate(`/calendar/day/${toDayKey(anchorDay)}`);
       }
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -245,6 +305,90 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
               </div>
             </div>
 
+            {mode === 'create' ? (
+              <section className="session-schedule" aria-labelledby="calendar-schedule-title">
+                <div className="session-schedule__intro">
+                  <div>
+                    <p className="feature-page__eyebrow">{t('sessions.scheduleLabel')}</p>
+                    <h3 id="calendar-schedule-title">{t('sessions.scheduleDays')}</h3>
+                    <p>{t('sessions.scheduleHint')}</p>
+                  </div>
+                </div>
+
+                <div className="session-schedule__modes" role="group" aria-label={t('sessions.scheduleLabel')}>
+                  <button
+                    type="button"
+                    className={`session-schedule__mode ${scheduleMode === 'single' ? 'is-active' : ''}`}
+                    aria-pressed={scheduleMode === 'single'}
+                    onClick={() => setScheduleMode('single')}
+                  >
+                    {t('sessions.scheduleSingle')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`session-schedule__mode ${scheduleMode === 'week' ? 'is-active' : ''}`}
+                    aria-pressed={scheduleMode === 'week'}
+                    onClick={() => setScheduleMode('week')}
+                  >
+                    {t('sessions.scheduleWeek')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`session-schedule__mode ${scheduleMode === 'month' ? 'is-active' : ''}`}
+                    aria-pressed={scheduleMode === 'month'}
+                    onClick={() => setScheduleMode('month')}
+                  >
+                    {t('sessions.scheduleMonth')}
+                  </button>
+                </div>
+
+                {scheduleMode !== 'single' ? (
+                  <>
+                    <div className="session-schedule__meta">
+                      <strong>
+                        {scheduleMode === 'week'
+                          ? t('sessions.scheduleWeekRange', {
+                              start: selectableDays[0]?.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) ?? '',
+                              end: selectableDays[selectableDays.length - 1]?.toLocaleDateString(locale, {
+                                month: 'short',
+                                day: 'numeric',
+                              }) ?? '',
+                            })
+                          : t('sessions.scheduleMonthRange', {
+                              month: anchorDay.toLocaleDateString(locale, { month: 'long' }),
+                              year: anchorDay.getFullYear(),
+                            })}
+                      </strong>
+                      <span>{t('sessions.scheduleSelectedCount', { count: selectedDayKeys.length })}</span>
+                    </div>
+
+                    <div className="session-schedule__days">
+                      {selectableDays.map((day) => {
+                        const dayKey = toDayKey(day);
+                        const isSelected = selectedDayKeys.includes(dayKey);
+                        const isAnchor = dayKey === toDayKey(anchorDay);
+
+                        return (
+                          <button
+                            key={dayKey}
+                            type="button"
+                            className={`session-schedule__day ${isSelected ? 'is-selected' : ''} ${isAnchor ? 'is-anchor' : ''}`}
+                            aria-pressed={isSelected}
+                            onClick={() => handleToggleDay(dayKey)}
+                          >
+                            <span>{day.toLocaleDateString(locale, { weekday: 'short' })}</span>
+                            <strong>{day.getDate()}</strong>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className="hint">{t('sessions.scheduleDaysHint')}</p>
+                  </>
+                ) : null}
+              </section>
+            ) : null}
+
             <div className="field">
               <label htmlFor="calendar-status">{t('common.status')}</label>
               <select id="calendar-status" value={form.status} onChange={handleChange('status')}>
@@ -261,7 +405,13 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             </div>
 
             <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('calendar.createSession')}
+              {isSaving
+                ? t('common.saving')
+                : mode === 'edit'
+                  ? t('common.saveChanges')
+                  : scheduleMode === 'single'
+                    ? t('calendar.createSession')
+                    : t('sessions.submitAddBulk')}
             </button>
           </form>
         )}

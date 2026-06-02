@@ -39,6 +39,14 @@ export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+export function startOfWeek(date: Date): Date {
+  const day = startOfDay(date);
+  const offset = (day.getDay() + 6) % 7;
+  const weekStart = new Date(day);
+  weekStart.setDate(day.getDate() - offset);
+  return weekStart;
+}
+
 export function toDayKey(date: Date): string {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -72,6 +80,24 @@ export function buildMonthGrid(month: Date): Date[] {
     day.setDate(gridStart.getDate() + index);
     return day;
   });
+}
+
+export function buildWeekDays(anchor: Date): Date[] {
+  const weekStart = startOfWeek(anchor);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(weekStart);
+    day.setDate(weekStart.getDate() + index);
+    return startOfDay(day);
+  });
+}
+
+export function buildMonthDays(anchor: Date): Date[] {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  return Array.from({ length: totalDays }, (_, index) => startOfDay(new Date(year, month, index + 1)));
 }
 
 export function combineDayAndTime(day: Date, time: string): string {

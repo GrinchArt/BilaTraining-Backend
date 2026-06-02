@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../auth';
 import { type TranslationKey, useI18n } from '../../i18n';
 import { getJson, sendPatch, sendVoid, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
+import { hexToRgba, normalizeColorHex } from '../../shared/color';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
 import { formatTimeShort, parseDayKey, startOfDay, toDayKey } from './calendar.utils';
 
@@ -23,6 +24,7 @@ type TimelineSession = {
   session: Session;
   clientName: string;
   workspaceName: string;
+  workspaceColor: string;
   startMinute: number;
   endMinute: number;
   top: number;
@@ -36,6 +38,7 @@ type TimelineSeed = {
   session: Session;
   clientName: string;
   workspaceName: string;
+  workspaceColor: string;
   startMinute: number;
   endMinute: number;
 };
@@ -250,12 +253,16 @@ export function CalendarDayPage() {
                       type="button"
                       className={`calendar-session-block calendar-session-block--${item.session.status}`}
                       style={{
+                        '--session-accent-soft': hexToRgba(item.workspaceColor, 0.22),
+                        '--session-accent-strong': hexToRgba(item.workspaceColor, 0.68),
+                        '--session-accent-border': hexToRgba(item.workspaceColor, 0.52),
+                        '--session-accent-shadow': hexToRgba(item.workspaceColor, 0.26),
                         top: `${item.top}px`,
                         left: `${item.left}px`,
                         width: `calc(100% - ${item.width}px)`,
                         height: `${item.height}px`,
                         zIndex: item.zIndex,
-                      }}
+                      } as CSSProperties}
                       onClick={() => setActiveSessionId(item.session.id)}
                     >
                       <strong>{item.clientName}</strong>
@@ -386,11 +393,13 @@ function buildTimelineSessions(
     const safeEndMinute = Math.max(endMinute, startMinute + 15);
     const client = clientById.get(session.clientId);
     const workspace = workspaceById.get(session.workspaceId);
+    const workspaceColor = normalizeColorHex(workspace?.colorHex);
 
     return {
       session,
       clientName: client ? formatClientName(client) : t('common.unknownClient'),
       workspaceName: workspace?.name ?? t('common.unknownWorkspace'),
+      workspaceColor,
       startMinute,
       endMinute: safeEndMinute,
     };

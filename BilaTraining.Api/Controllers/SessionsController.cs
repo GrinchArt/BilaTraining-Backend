@@ -65,11 +65,43 @@ public sealed class SessionsController : ControllerBase
                     request.ClientId,
                     request.Notes,
                     request.StartAtUtc,
-                    request.EndAtUtc),
+                    request.EndAtUtc,
+                    request.Status),
                 ct);
 
             var session = await _dispatcher.Send(new GetSessionByIdQuery(id), ct);
             return CreatedAtAction(nameof(GetById), new { id }, session);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("bulk")]
+    [ProducesResponseType(typeof(CreateBulkSessionsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CreateBulkSessionsResponse>> CreateBulk(CreateBulkSessionsRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var ids = await _dispatcher.Send(
+                new CreateSessionsBulkCommand(
+                    request.WorkspaceId,
+                    request.ClientId,
+                    request.Notes,
+                    request.Sessions
+                        .Select(item => new SessionTimeRange(item.StartAtUtc, item.EndAtUtc))
+                        .ToArray(),
+                    request.Status),
+                ct);
+
+            return Ok(new CreateBulkSessionsResponse(ids.Count));
         }
         catch (KeyNotFoundException)
         {
@@ -148,7 +180,21 @@ public sealed class SessionsController : ControllerBase
         Guid ClientId,
         string? Notes,
         DateTime StartAtUtc,
+        DateTime EndAtUtc,
+        SessionStatus? Status);
+
+    public sealed record CreateBulkSessionsRequest(
+        Guid WorkspaceId,
+        Guid ClientId,
+        string? Notes,
+        IReadOnlyList<CreateBulkSessionItemRequest> Sessions,
+        SessionStatus? Status);
+
+    public sealed record CreateBulkSessionItemRequest(
+        DateTime StartAtUtc,
         DateTime EndAtUtc);
+
+    public sealed record CreateBulkSessionsResponse(int CreatedCount);
 
     public sealed record UpdateSessionRequest(
         Guid WorkspaceId,

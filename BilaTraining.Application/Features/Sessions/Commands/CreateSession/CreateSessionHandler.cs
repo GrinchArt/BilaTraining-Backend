@@ -23,6 +23,7 @@ public sealed class CreateSessionHandler(
             request.EndAtUtc,
             request.Notes);
 
+        ApplyRequestedStatus(session, request.Status);
         db.Sessions.Add(session);
         await db.SaveChangesAsync(ct);
 
@@ -51,9 +52,15 @@ public sealed class CreateSessionHandler(
             throw new KeyNotFoundException($"Client '{clientId}' was not found.");
     }
 
-    private static void EnsureAuthenticated(ICurrentUser currentUser)
+    internal static void EnsureAuthenticated(ICurrentUser currentUser)
     {
         if (!currentUser.IsAuthenticated)
             throw new UnauthorizedAccessException();
+    }
+
+    internal static void ApplyRequestedStatus(Session session, Domain.Enums.SessionStatus? status)
+    {
+        if (status is { } nextStatus && nextStatus != Domain.Enums.SessionStatus.Planned)
+            session.SetStatus(nextStatus);
     }
 }

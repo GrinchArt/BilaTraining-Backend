@@ -3,11 +3,15 @@ using BilaTraining.Domain.Enums;
 
 namespace BilaTraining.Application.Features.Sessions.Commands.CreateSession;
 
-public sealed record CreateSessionCommand(
+public sealed record CreateSessionsBulkCommand(
     Guid WorkspaceId,
     Guid ClientId,
     string? Notes,
-    DateTime StartAtUtc,
-    DateTime EndAtUtc,
+    IReadOnlyList<SessionTimeRange> Sessions,
     SessionStatus? Status = null
-) : IRequest<Guid>;
+) : IRequest<IReadOnlyList<Guid>>;
+
+public sealed record SessionTimeRange(
+    DateTime StartAtUtc,
+    DateTime EndAtUtc
+);
