@@ -62,6 +62,11 @@ public sealed class GetExerciseProgressReportHandler(
 
     private static ExerciseProgressSummaryDto BuildSummary(IReadOnlyList<ExerciseProgressRow> rows)
     {
+        if (rows.Count == 0)
+        {
+            return new ExerciseProgressSummaryDto(0, 0, 0, 0m, 0m);
+        }
+
         return new ExerciseProgressSummaryDto(
             rows.Select(item => item.SessionId).Distinct().Count(),
             rows.Count,

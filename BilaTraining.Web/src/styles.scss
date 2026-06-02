@@ -1391,6 +1391,7 @@ a {
   z-index: 1;
   width: min(100%, 420px);
   padding: 18px;
+  overflow: visible;
 }
 
 .calendar-session-modal__header {
@@ -1442,6 +1443,7 @@ a {
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(20, 27, 47, 0.99) 0%, rgba(12, 17, 31, 0.99) 100%);
   box-shadow: var(--shadow);
+  z-index: 4;
 }
 
 .calendar-session-modal__menu-item {

@@ -33,14 +33,18 @@ export function ReportsPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [selectedClientId, setSelectedClientId] = useState('all');
   const [selectedExerciseId, setSelectedExerciseId] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSessionReport, setIsLoadingSessionReport] = useState(true);
+  const [isLoadingProgressReport, setIsLoadingProgressReport] = useState(true);
   const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [catalogErrorMessage, setCatalogErrorMessage] = useState('');
+  const [sessionErrorMessage, setSessionErrorMessage] = useState('');
+  const [progressErrorMessage, setProgressErrorMessage] = useState('');
 
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', []);
 
   const loadCatalogs = useCallback(async () => {
     setIsLoadingCatalogs(true);
+    setCatalogErrorMessage('');
 
     try {
       const [nextClients, nextExercises] = await Promise.all([
@@ -51,15 +55,15 @@ export function ReportsPage() {
       setClients(nextClients);
       setExercises(nextExercises);
     } catch (error) {
-      setErrorMessage(toMessage(error));
+      setCatalogErrorMessage(toMessage(error));
     } finally {
       setIsLoadingCatalogs(false);
     }
   }, [apiBaseUrl, authenticatedFetch, t]);
 
-  const loadReports = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage('');
+  const loadSessionReport = useCallback(async () => {
+    setIsLoadingSessionReport(true);
+    setSessionErrorMessage('');
 
     try {
       const overviewSearch = new URLSearchParams({
@@ -68,6 +72,26 @@ export function ReportsPage() {
         timeZone,
       });
 
+      const nextSessionReport = await getJson<SessionOverviewReport>(
+        `${apiBaseUrl}/reports/sessions-overview?${overviewSearch.toString()}`,
+        authenticatedFetch,
+        t('reports.loadFailed'),
+      );
+
+      setSessionReport(nextSessionReport);
+    } catch (error) {
+      setSessionReport(null);
+      setSessionErrorMessage(toMessage(error));
+    } finally {
+      setIsLoadingSessionReport(false);
+    }
+  }, [anchorDate, apiBaseUrl, authenticatedFetch, period, t, timeZone]);
+
+  const loadProgressReport = useCallback(async () => {
+    setIsLoadingProgressReport(true);
+    setProgressErrorMessage('');
+
+    try {
       const progressSearch = new URLSearchParams({
         period,
         anchorDate,
@@ -82,25 +106,18 @@ export function ReportsPage() {
         progressSearch.set('exerciseId', selectedExerciseId);
       }
 
-      const [nextSessionReport, nextProgressReport] = await Promise.all([
-        getJson<SessionOverviewReport>(
-          `${apiBaseUrl}/reports/sessions-overview?${overviewSearch.toString()}`,
-          authenticatedFetch,
-          t('reports.loadFailed'),
-        ),
-        getJson<ExerciseProgressReport>(
-          `${apiBaseUrl}/reports/exercise-progress?${progressSearch.toString()}`,
-          authenticatedFetch,
-          t('reports.progressLoadFailed'),
-        ),
-      ]);
+      const nextProgressReport = await getJson<ExerciseProgressReport>(
+        `${apiBaseUrl}/reports/exercise-progress?${progressSearch.toString()}`,
+        authenticatedFetch,
+        t('reports.progressLoadFailed'),
+      );
 
-      setSessionReport(nextSessionReport);
       setProgressReport(nextProgressReport);
     } catch (error) {
-      setErrorMessage(toMessage(error));
+      setProgressReport(null);
+      setProgressErrorMessage(toMessage(error));
     } finally {
-      setIsLoading(false);
+      setIsLoadingProgressReport(false);
     }
   }, [anchorDate, apiBaseUrl, authenticatedFetch, period, selectedClientId, selectedExerciseId, t, timeZone]);
 
@@ -109,8 +126,12 @@ export function ReportsPage() {
   }, [loadCatalogs]);
 
   useEffect(() => {
-    void loadReports();
-  }, [loadReports]);
+    void loadSessionReport();
+  }, [loadSessionReport]);
+
+  useEffect(() => {
+    void loadProgressReport();
+  }, [loadProgressReport]);
 
   const maxSessionTimelineTotal = useMemo(
     () => Math.max(...(sessionReport?.timeline.map((point) => point.total) ?? [0]), 1),
@@ -151,6 +172,8 @@ export function ReportsPage() {
 
   const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null;
   const selectedExercise = exercises.find((exercise) => exercise.id === selectedExerciseId) ?? null;
+  const periodSource = sessionReport?.period ?? progressReport?.period ?? null;
+  const isLoadingAnyReport = isLoadingSessionReport || isLoadingProgressReport;
 
   return (
     <section className="reports-page">
@@ -162,7 +185,8 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
+      {catalogErrorMessage ? <p className="feedback">{catalogErrorMessage}</p> : null}
+      {sessionErrorMessage ? <p className="feedback">{sessionErrorMessage}</p> : null}
 
       <section className="card reports-panel">
         <div className="reports-toolbar">
@@ -184,14 +208,14 @@ export function ReportsPage() {
           </div>
 
           <div className="reports-range-nav">
-            <button type="button" className="button button--secondary" onClick={() => handleMovePeriod('prev')} disabled={!sessionReport || isLoading}>
+            <button type="button" className="button button--secondary" onClick={() => handleMovePeriod('prev')} disabled={!periodSource || isLoadingAnyReport}>
               {t('common.prev')}
             </button>
             <div className="reports-range-nav__label">
               <strong>{visibleRangeLabel || t('reports.loadingPeriod')}</strong>
-              <span>{sessionReport?.period.timeZone ?? progressReport?.period.timeZone ?? timeZone}</span>
+              <span>{periodSource?.timeZone ?? timeZone}</span>
             </div>
-            <button type="button" className="button button--secondary" onClick={() => handleMovePeriod('next')} disabled={!sessionReport || isLoading}>
+            <button type="button" className="button button--secondary" onClick={() => handleMovePeriod('next')} disabled={!periodSource || isLoadingAnyReport}>
               {t('common.next')}
             </button>
           </div>
@@ -233,9 +257,9 @@ export function ReportsPage() {
           </div>
         </div>
 
-        {isLoading ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
+        {isLoadingSessionReport && isLoadingProgressReport ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
 
-        {!isLoading && sessionReport && progressReport ? (
+        {!isLoadingSessionReport && sessionReport ? (
           <div className="reports-layout">
             <div className="reports-kpis">
               <article className="reports-kpi reports-kpi--total">
@@ -306,40 +330,50 @@ export function ReportsPage() {
                 </div>
               </div>
 
-              <div className="reports-kpis reports-kpis--progress">
-                <article className="reports-kpi reports-kpi--total">
-                  <span className="reports-kpi__label">{t('reports.completedSessionsMetric')}</span>
-                  <strong>{progressReport.summary.completedSessions}</strong>
-                </article>
-                <article className="reports-kpi reports-kpi--planned">
-                  <span className="reports-kpi__label">{t('reports.totalSetsMetric')}</span>
-                  <strong>{progressReport.summary.totalSets}</strong>
-                </article>
-                <article className="reports-kpi reports-kpi--completed">
-                  <span className="reports-kpi__label">{t('reports.totalRepetitionsMetric')}</span>
-                  <strong>{progressReport.summary.totalRepetitions}</strong>
-                </article>
-                <article className="reports-kpi reports-kpi--cancelled">
-                  <span className="reports-kpi__label">{t('reports.totalVolumeMetric')}</span>
-                  <strong>{formatNumber(progressReport.summary.totalVolume, locale)}</strong>
-                </article>
-                <article className="reports-kpi reports-kpi--no-show">
-                  <span className="reports-kpi__label">{t('reports.maxWeightMetric')}</span>
-                  <strong>{formatNumber(progressReport.summary.maxWeight, locale)}</strong>
-                </article>
-              </div>
+              {isLoadingProgressReport ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
+              {!isLoadingProgressReport && progressErrorMessage ? <p className="feedback">{progressErrorMessage}</p> : null}
+              {!isLoadingProgressReport && progressReport ? (
+                <>
+                  <div className="reports-kpis reports-kpis--progress">
+                    <article className="reports-kpi reports-kpi--total">
+                      <span className="reports-kpi__label">{t('reports.completedSessionsMetric')}</span>
+                      <strong>{progressReport.summary.completedSessions}</strong>
+                    </article>
+                    <article className="reports-kpi reports-kpi--planned">
+                      <span className="reports-kpi__label">{t('reports.totalSetsMetric')}</span>
+                      <strong>{progressReport.summary.totalSets}</strong>
+                    </article>
+                    <article className="reports-kpi reports-kpi--completed">
+                      <span className="reports-kpi__label">{t('reports.totalRepetitionsMetric')}</span>
+                      <strong>{progressReport.summary.totalRepetitions}</strong>
+                    </article>
+                    <article className="reports-kpi reports-kpi--cancelled">
+                      <span className="reports-kpi__label">{t('reports.totalVolumeMetric')}</span>
+                      <strong>{formatNumber(progressReport.summary.totalVolume, locale)}</strong>
+                    </article>
+                    <article className="reports-kpi reports-kpi--no-show">
+                      <span className="reports-kpi__label">{t('reports.maxWeightMetric')}</span>
+                      <strong>{formatNumber(progressReport.summary.maxWeight, locale)}</strong>
+                    </article>
+                  </div>
 
-              {progressReport.summary.totalSets === 0 ? (
-                <p className="exercise-page__state">{t('reports.progressEmpty')}</p>
-              ) : (
-                <div className="reports-chart reports-chart--progress">
-                  {progressReport.timeline.map((point) => (
-                    <ProgressTimelineBar key={point.date} point={point} maxVolume={maxProgressVolume} locale={locale} />
-                  ))}
-                </div>
-              )}
+                  {progressReport.summary.totalSets === 0 ? (
+                    <p className="exercise-page__state">{t('reports.progressEmpty')}</p>
+                  ) : (
+                    <div className="reports-chart reports-chart--progress">
+                      {progressReport.timeline.map((point) => (
+                        <ProgressTimelineBar key={point.date} point={point} maxVolume={maxProgressVolume} locale={locale} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : null}
             </section>
           </div>
+        ) : null}
+
+        {!isLoadingSessionReport && !sessionReport && !sessionErrorMessage ? (
+          <p className="exercise-page__state">{t('reports.loading')}</p>
         ) : null}
       </section>
     </section>

@@ -53,12 +53,19 @@ internal static class ReportPeriodHelper
         if (string.IsNullOrWhiteSpace(timeZone))
             return TimeZoneInfo.Utc;
 
+        var timeZoneId = timeZone.Trim();
+
         try
         {
-            return TimeZoneInfo.FindSystemTimeZoneById(timeZone.Trim());
+            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
         catch (TimeZoneNotFoundException)
         {
+            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZoneId, out var windowsId))
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(windowsId);
+            }
+
             throw new ArgumentException("The supplied time zone is invalid.");
         }
         catch (InvalidTimeZoneException)
