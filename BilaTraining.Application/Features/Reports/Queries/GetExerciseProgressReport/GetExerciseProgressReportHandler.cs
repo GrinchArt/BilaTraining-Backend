@@ -29,13 +29,15 @@ public sealed class GetExerciseProgressReportHandler(
                 && session.Status == SessionStatus.Completed
                 && session.StartAtUtc >= startUtc
                 && session.StartAtUtc < endUtcExclusive
-            select new ExerciseProgressRow(
+            select new
+            {
                 session.Id,
                 session.ClientId,
                 sessionExercise.ExerciseId,
-                session.StartAtUtc,
+                SessionStartAtUtc = session.StartAtUtc,
                 set.Repetitions,
-                set.Weight);
+                set.Weight,
+            };
 
         if (request.ClientId.HasValue)
             query = query.Where(item => item.ClientId == request.ClientId.Value);
@@ -43,7 +45,15 @@ public sealed class GetExerciseProgressReportHandler(
         if (request.ExerciseId.HasValue)
             query = query.Where(item => item.ExerciseId == request.ExerciseId.Value);
 
-        var rows = await query.ToListAsync(ct);
+        var rows = await query
+            .Select(item => new ExerciseProgressRow(
+                item.Id,
+                item.ClientId,
+                item.ExerciseId,
+                item.SessionStartAtUtc,
+                item.Repetitions,
+                item.Weight))
+            .ToListAsync(ct);
         var summary = BuildSummary(rows);
         var timeline = BuildTimeline(rows, periodContext.StartDate, periodContext.EndDate, periodContext.TimeZone);
 
