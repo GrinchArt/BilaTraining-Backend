@@ -33,6 +33,25 @@ export type Session = {
   status: SessionStatus;
 };
 
+export type SessionExercise = {
+  id: string;
+  sessionId: string;
+  exerciseId: string;
+  sortOrder: number;
+  notes: string | null;
+  createdAtUtc: string;
+};
+
+export type SessionExerciseSet = {
+  id: string;
+  sessionExerciseId: string;
+  setNumber: number;
+  repetitions: number | null;
+  weight: number | null;
+  weightUnit: string | null;
+  notes: string | null;
+};
+
 export type ReportPeriod = 'week' | 'month';
 
 export type SessionOverviewPeriod = {
@@ -72,4 +91,27 @@ export type SessionOverviewReport = {
   summary: SessionOverviewSummary;
   byStatus: SessionOverviewStatus[];
   timeline: SessionOverviewTimelinePoint[];
+};
+
+export type ExerciseProgressSummary = {
+  completedSessions: number;
+  totalSets: number;
+  totalRepetitions: number;
+  totalVolume: number;
+  maxWeight: number;
+};
+
+export type ExerciseProgressTimelinePoint = {
+  date: string;
+  completedSessions: number;
+  totalSets: number;
+  totalRepetitions: number;
+  totalVolume: number;
+  maxWeight: number;
+};
+
+export type ExerciseProgressReport = {
+  period: SessionOverviewPeriod;
+  summary: ExerciseProgressSummary;
+  timeline: ExerciseProgressTimelinePoint[];
 };

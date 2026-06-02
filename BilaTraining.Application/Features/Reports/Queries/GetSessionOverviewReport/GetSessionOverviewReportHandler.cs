@@ -1,4 +1,5 @@
 using BilaTraining.Application.Abstractions;
+using BilaTraining.Application.Features.Reports;
 using BilaTraining.Application.Features.Reports.Dtos;
 using BilaTraining.Application.Messaging;
 using BilaTraining.Domain.Enums;
@@ -15,12 +16,9 @@ public sealed class GetSessionOverviewReportHandler(
     {
         EnsureAuthenticated(currentUser);
 
-        var period = NormalizePeriod(request.Period);
-        var timeZone = ResolveTimeZone(request.TimeZone);
-        var anchorDate = request.AnchorDate ?? DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone));
-        var range = BuildRange(period, anchorDate);
-        var startUtc = ConvertLocalDateToUtc(range.StartDate, timeZone);
-        var endUtcExclusive = ConvertLocalDateToUtc(range.EndDate.AddDays(1), timeZone);
+        var periodContext = ReportPeriodHelper.Resolve(request.Period, request.AnchorDate, request.TimeZone);
+        var startUtc = ReportPeriodHelper.ConvertLocalDateToUtc(periodContext.StartDate, periodContext.TimeZone);
+        var endUtcExclusive = ReportPeriodHelper.ConvertLocalDateToUtc(periodContext.EndDate.AddDays(1), periodContext.TimeZone);
 
         var query = db.Sessions
             .AsNoTracking()
@@ -39,7 +37,7 @@ public sealed class GetSessionOverviewReportHandler(
                 s.Status))
             .ToListAsync(ct);
 
-        var timeline = BuildTimeline(sessions, range.StartDate, range.EndDate, timeZone);
+        var timeline = BuildTimeline(sessions, periodContext.StartDate, periodContext.EndDate, periodContext.TimeZone);
         var summary = new SessionOverviewSummaryDto(
             timeline.Sum(point => point.Total),
             timeline.Sum(point => point.Planned),
@@ -57,74 +55,16 @@ public sealed class GetSessionOverviewReportHandler(
 
         return new SessionOverviewReportDto(
             new SessionOverviewPeriodDto(
-                period,
-                anchorDate,
-                range.StartDate,
-                range.EndDate,
-                GetPreviousAnchorDate(period, anchorDate),
-                GetNextAnchorDate(period, anchorDate),
-                timeZone.Id),
+                periodContext.Period,
+                periodContext.AnchorDate,
+                periodContext.StartDate,
+                periodContext.EndDate,
+                periodContext.PreviousAnchorDate,
+                periodContext.NextAnchorDate,
+                periodContext.TimeZone.Id),
             summary,
             byStatus,
             timeline);
-    }
-
-    private static string NormalizePeriod(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "month";
-
-        var normalized = value.Trim().ToLowerInvariant();
-
-        return normalized switch
-        {
-            "week" => normalized,
-            "month" => normalized,
-            _ => throw new ArgumentException("Period must be either 'week' or 'month'."),
-        };
-    }
-
-    private static TimeZoneInfo ResolveTimeZone(string? timeZone)
-    {
-        if (string.IsNullOrWhiteSpace(timeZone))
-            return TimeZoneInfo.Utc;
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(timeZone.Trim());
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            throw new ArgumentException("The supplied time zone is invalid.");
-        }
-        catch (InvalidTimeZoneException)
-        {
-            throw new ArgumentException("The supplied time zone is invalid.");
-        }
-    }
-
-    private static ReportRange BuildRange(string period, DateOnly anchorDate)
-    {
-        if (period == "week")
-        {
-            var startDate = anchorDate.AddDays(-(((int)anchorDate.DayOfWeek + 6) % 7));
-            return new ReportRange(startDate, startDate.AddDays(6));
-        }
-
-        var startOfMonth = new DateOnly(anchorDate.Year, anchorDate.Month, 1);
-        return new ReportRange(startOfMonth, startOfMonth.AddMonths(1).AddDays(-1));
-    }
-
-    private static DateOnly GetPreviousAnchorDate(string period, DateOnly anchorDate)
-        => period == "week" ? anchorDate.AddDays(-7) : anchorDate.AddMonths(-1);
-
-    private static DateOnly GetNextAnchorDate(string period, DateOnly anchorDate)
-        => period == "week" ? anchorDate.AddDays(7) : anchorDate.AddMonths(1);
-
-    private static DateTime ConvertLocalDateToUtc(DateOnly date, TimeZoneInfo timeZone)
-    {
-        var localDateTime = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        return TimeZoneInfo.ConvertTimeToUtc(localDateTime, timeZone);
     }
 
     private static IReadOnlyList<SessionOverviewTimelinePointDto> BuildTimeline(
@@ -136,11 +76,11 @@ public sealed class GetSessionOverviewReportHandler(
         var dayCount = endDate.DayNumber - startDate.DayNumber + 1;
         var buckets = Enumerable.Range(0, dayCount).ToDictionary(
             offset => startDate.AddDays(offset),
-            offset => new TimelineAccumulator());
+            _ => new TimelineAccumulator());
 
         foreach (var session in sessions)
         {
-            var sessionUtc = EnsureUtc(session.StartAtUtc);
+            var sessionUtc = ReportPeriodHelper.EnsureUtc(session.StartAtUtc);
             var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(sessionUtc, timeZone));
 
             if (!buckets.TryGetValue(localDate, out var bucket))
@@ -177,14 +117,6 @@ public sealed class GetSessionOverviewReportHandler(
             .ToList();
     }
 
-    private static DateTime EnsureUtc(DateTime value)
-        => value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-        };
-
     private static void EnsureAuthenticated(ICurrentUser currentUser)
     {
         if (!currentUser.IsAuthenticated)
@@ -194,11 +126,6 @@ public sealed class GetSessionOverviewReportHandler(
     private sealed record SessionReportRow(
         DateTime StartAtUtc,
         SessionStatus Status
-    );
-
-    private sealed record ReportRange(
-        DateOnly StartDate,
-        DateOnly EndDate
     );
 
     private sealed class TimelineAccumulator

@@ -799,6 +799,11 @@ a {
   flex-wrap: wrap;
 }
 
+.reports-filters {
+  display: grid;
+  gap: 12px;
+}
+
 .reports-period-toggle {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -931,6 +936,10 @@ a {
   background: #ff5b6e;
 }
 
+.reports-chart__segment--progress {
+  background: linear-gradient(180deg, #a7d96c 0%, #4fd05a 100%);
+}
+
 .reports-kpi--planned strong,
 .reports-kpi--completed strong,
 .reports-kpi--cancelled strong,
@@ -943,6 +952,10 @@ a {
 .reports-grid {
   display: grid;
   gap: 16px;
+}
+
+.reports-kpis--progress {
+  margin-bottom: 18px;
 }
 
 .reports-card {
@@ -1588,6 +1601,80 @@ a {
   pointer-events: none;
 }
 
+.session-tracking-page {
+  padding-bottom: 24px;
+}
+
+.session-tracking-summary,
+.session-tracking-add,
+.session-tracking-exercise-card {
+  display: grid;
+  gap: 14px;
+}
+
+.session-tracking-summary__meta,
+.session-tracking-exercise-card__header,
+.session-tracking-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.session-tracking-summary__meta h3,
+.session-tracking-summary__meta p,
+.session-tracking-exercise-card__header h3,
+.session-tracking-exercise-card__header p,
+.session-tracking-add__hint {
+  margin: 0;
+}
+
+.session-tracking-add__hint,
+.session-tracking-exercise-card__header p {
+  color: var(--text-muted);
+}
+
+.session-tracking-exercises {
+  display: grid;
+  gap: 16px;
+}
+
+.session-tracking-set-list {
+  display: grid;
+  gap: 12px;
+}
+
+.session-tracking-set-row {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(61, 77, 122, 0.72);
+  border-radius: 10px;
+  background: rgba(10, 16, 30, 0.72);
+}
+
+.session-tracking-set-row--new {
+  border-style: dashed;
+}
+
+.session-tracking-set-row__heading strong {
+  color: var(--text);
+}
+
+.session-tracking-set-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.session-tracking-set-grid__notes {
+  grid-column: 1 / -1;
+}
+
+.session-tracking-inline-actions {
+  justify-content: flex-end;
+}
+
 .calendar-status-tag--0 {
   background: rgba(37, 117, 255, 0.18);
   border-color: rgba(85, 127, 220, 0.44);
@@ -1631,6 +1718,10 @@ a {
   .reports-grid {
     grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
   }
+
+  .reports-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 768px) {
@@ -1646,6 +1737,10 @@ a {
 
   .session-schedule__days {
     grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  }
+
+  .session-tracking-set-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

@@ -321,6 +321,13 @@ export function CalendarDayPage() {
                       <button
                         type="button"
                         className="calendar-session-modal__menu-item"
+                        onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/${activeTimelineSession.session.id}/tracking`)}
+                      >
+                        {t('calendar.recordWorkout')}
+                      </button>
+                      <button
+                        type="button"
+                        className="calendar-session-modal__menu-item"
                         onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/${activeTimelineSession.session.id}`)}
                       >
                         {t('common.edit')}

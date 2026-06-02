@@ -11,6 +11,7 @@ import { ClientFormPage, ClientsPage as ClientsRoutePage } from './features/clie
 import { ExerciseFormPage, ExercisesPage as ExercisesRoutePage } from './features/exercises/ExercisesPage';
 import { ReportsPage as ReportsRoutePage } from './features/reports/ReportsPage';
 import { SessionFormPage, SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
+import { SessionTrackingPage as SessionTrackingRoutePage } from './features/sessions/SessionTrackingPage';
 import { WorkspaceFormPage, WorkspacesPage as WorkspacesRoutePage } from './features/workspaces/WorkspacesPage';
 import { useI18n } from './i18n';
 import { toMessage } from './shared/api';
@@ -161,6 +162,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CalendarSessionRoutePage mode="edit" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="calendar/day/:dayKey/session/:sessionId/tracking"
+          element={
+            <ProtectedRoute>
+              <SessionTrackingRoutePage />
             </ProtectedRoute>
           }
         />
