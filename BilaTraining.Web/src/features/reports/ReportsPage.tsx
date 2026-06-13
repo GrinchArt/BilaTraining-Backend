@@ -189,7 +189,7 @@ export function ReportsPage() {
         </div>
       </div>
 
-      <section className="card reports-panel">
+      <section className="reports-panel">
         <div className="reports-toolbar">
           <div className="reports-period-toggle" role="tablist" aria-label={t('reports.periodAria')}>
             <button

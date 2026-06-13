@@ -2276,7 +2276,7 @@ a {
   .shell__bottom-nav {
     gap: 6px;
     padding: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
   .shell__bottom-nav-link {
@@ -2290,12 +2290,12 @@ a {
   }
 
   .shell__more-sheet {
-    bottom: calc(86px + env(safe-area-inset-bottom));
+    bottom: calc(94px + env(safe-area-inset-bottom));
     padding: 16px;
   }
 
   .calendar-page__grid--detail {
-    padding-bottom: 148px;
+    padding-bottom: 156px;
   }
 
   .calendar-board__header {
@@ -2324,7 +2324,7 @@ a {
   }
 
   .calendar-day-page__actions {
-    bottom: calc(84px + env(safe-area-inset-bottom));
+    bottom: calc(92px + env(safe-area-inset-bottom));
   }
 
   .calendar-timeline__scroller {
