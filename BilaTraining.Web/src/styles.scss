@@ -1354,6 +1354,18 @@ a {
   -webkit-box-orient: vertical;
 }
 
+.calendar-session-block span {
+  display: block;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-shadow: 0 1px 4px rgba(6, 11, 24, 0.28);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .calendar-session-block--0::before {
   background: #4d8fff;
 }
@@ -1826,6 +1838,10 @@ a {
     -webkit-line-clamp: 2;
   }
 
+  .calendar-session-block span {
+    font-size: 11px;
+  }
+
   .calendar-session-modal__header,
   .calendar-session-modal__header-actions {
     flex-direction: row;
@@ -1983,6 +1999,10 @@ a {
 
   .calendar-session-block strong {
     font-size: 12px;
+  }
+
+  .calendar-session-block span {
+    font-size: 10px;
   }
 
   .calendar-session-modal__card {

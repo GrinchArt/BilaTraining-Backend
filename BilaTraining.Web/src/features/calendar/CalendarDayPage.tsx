@@ -12,12 +12,7 @@ import { formatTimeShort, parseDayKey, startOfDay, toDayKey } from './calendar.u
 const HOUR_SLOT_HEIGHT = 72;
 const MINUTES_IN_DAY = 24 * 60;
 const DAY_TIMELINE_HEIGHT = 24 * HOUR_SLOT_HEIGHT;
-const MAX_OVERLAP_STACK = 3;
-const OVERLAP_HORIZONTAL_OFFSET = 42;
-const OVERLAP_VERTICAL_OFFSET = 12;
-const OVERLAP_LEFT_PADDING = 4;
-const OVERLAP_RIGHT_PADDING = 12;
-const OVERLAP_WIDTH_STEP = 18;
+const SESSION_COLUMN_GAP = 8;
 const MIN_SESSION_BLOCK_HEIGHT = 64;
 
 type TimelineSession = {
@@ -29,8 +24,8 @@ type TimelineSession = {
   endMinute: number;
   top: number;
   height: number;
-  left: number;
-  width: number;
+  left: string;
+  width: string;
   zIndex: number;
 };
 
@@ -258,14 +253,17 @@ export function CalendarDayPage() {
                         '--session-accent-border': hexToRgba(item.workspaceColor, 0.52),
                         '--session-accent-shadow': hexToRgba(item.workspaceColor, 0.26),
                         top: `${item.top}px`,
-                        left: `${item.left}px`,
-                        width: `calc(100% - ${item.width}px)`,
+                        left: item.left,
+                        width: item.width,
                         height: `${item.height}px`,
                         zIndex: item.zIndex,
                       } as CSSProperties}
                       onClick={() => setActiveSessionId(item.session.id)}
                     >
                       <strong>{item.clientName}</strong>
+                      <span>
+                        {formatTimeShort(item.session.startAtUtc, locale)} - {formatTimeShort(item.session.endAtUtc, locale)}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -394,46 +392,63 @@ function buildTimelineSessions(
   t: (key: TranslationKey) => string,
 ): TimelineSession[] {
   const dayStart = startOfDay(selectedDay).getTime();
-  const rawSessions = sessions.map((session) => {
-    const startMinute = clampMinute((new Date(session.startAtUtc).getTime() - dayStart) / 60_000);
-    const endMinute = clampMinute((new Date(session.endAtUtc).getTime() - dayStart) / 60_000);
-    const safeEndMinute = Math.max(endMinute, startMinute + 15);
-    const client = clientById.get(session.clientId);
-    const workspace = workspaceById.get(session.workspaceId);
-    const workspaceColor = normalizeColorHex(workspace?.colorHex);
+  const rawSessions = sessions
+    .map((session) => {
+      const startMinute = clampMinute((new Date(session.startAtUtc).getTime() - dayStart) / 60_000);
+      const endMinute = clampMinute((new Date(session.endAtUtc).getTime() - dayStart) / 60_000);
+      const safeEndMinute = Math.max(endMinute, startMinute + 15);
+      const client = clientById.get(session.clientId);
+      const workspace = workspaceById.get(session.workspaceId);
+      const workspaceColor = normalizeColorHex(workspace?.colorHex);
 
-    return {
-      session,
-      clientName: client ? formatClientName(client) : t('common.unknownClient'),
-      workspaceName: workspace?.name ?? t('common.unknownWorkspace'),
-      workspaceColor,
-      startMinute,
-      endMinute: safeEndMinute,
-    };
-  });
+      return {
+        session,
+        clientName: client ? formatClientName(client) : t('common.unknownClient'),
+        workspaceName: workspace?.name ?? t('common.unknownWorkspace'),
+        workspaceColor,
+        startMinute,
+        endMinute: safeEndMinute,
+      };
+    })
+    .sort((left, right) => left.startMinute - right.startMinute || left.endMinute - right.endMinute);
 
   const groups = groupOverlappingSessions(rawSessions);
 
   return groups.flatMap((group) => {
     const laidOut = assignColumns(group);
-    const maxOverlapColumn = Math.max(...laidOut.map((item) => item.column), 0);
+    const columnCount = Math.max(...laidOut.map((item) => item.column), 0) + 1;
+    const eventsByColumn = new Map<number, typeof laidOut>();
+
+    for (const item of laidOut) {
+      const columnItems = eventsByColumn.get(item.column);
+
+      if (columnItems) {
+        columnItems.push(item);
+      } else {
+        eventsByColumn.set(item.column, [item]);
+      }
+    }
 
     return laidOut.map((item) => {
       const durationMinutes = item.endMinute - item.startMinute;
-      const overlapIndex = Math.min(item.column, MAX_OVERLAP_STACK);
-      const overlapOffsetX = overlapIndex * OVERLAP_HORIZONTAL_OFFSET + OVERLAP_LEFT_PADDING;
-      const overlapOffsetY = overlapIndex * OVERLAP_VERTICAL_OFFSET;
-      const reservedRightSpace =
-        Math.min(maxOverlapColumn, MAX_OVERLAP_STACK) * OVERLAP_HORIZONTAL_OFFSET +
-        overlapIndex * OVERLAP_WIDTH_STEP +
-        OVERLAP_RIGHT_PADDING;
+      let span = 1;
+
+      for (let nextColumn = item.column + 1; nextColumn < columnCount; nextColumn += 1) {
+        const conflictingItem = (eventsByColumn.get(nextColumn) ?? []).some((candidate) => sessionsOverlap(item, candidate));
+
+        if (conflictingItem) {
+          break;
+        }
+
+        span += 1;
+      }
 
       return {
         ...item,
-        top: (item.startMinute / 60) * HOUR_SLOT_HEIGHT + overlapOffsetY,
+        top: (item.startMinute / 60) * HOUR_SLOT_HEIGHT,
         height: Math.max((durationMinutes / 60) * HOUR_SLOT_HEIGHT, MIN_SESSION_BLOCK_HEIGHT),
-        left: overlapOffsetX,
-        width: reservedRightSpace,
+        left: buildColumnLeft(item.column, columnCount),
+        width: buildColumnWidth(span, columnCount),
         zIndex: item.column + 1,
       };
     });
@@ -489,6 +504,35 @@ function assignColumns<
       column,
     };
   });
+}
+
+function sessionsOverlap(
+  left: {
+    startMinute: number;
+    endMinute: number;
+  },
+  right: {
+    startMinute: number;
+    endMinute: number;
+  },
+): boolean {
+  return left.startMinute < right.endMinute && right.startMinute < left.endMinute;
+}
+
+function buildColumnLeft(column: number, columnCount: number): string {
+  if (columnCount <= 1) {
+    return '0';
+  }
+
+  return `calc(${(100 / columnCount) * column}% + ${(SESSION_COLUMN_GAP * column) / columnCount}px)`;
+}
+
+function buildColumnWidth(span: number, columnCount: number): string {
+  if (columnCount <= 1) {
+    return '100%';
+  }
+
+  return `calc(${(100 * span) / columnCount}% - ${((columnCount - span) * SESSION_COLUMN_GAP) / columnCount}px)`;
 }
 
 function clampMinute(value: number): number {
