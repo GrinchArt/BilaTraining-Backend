@@ -42,6 +42,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const anchorDay = useMemo(() => getScheduleAnchorDay(form.startAtLocal, selectedDay), [form.startAtLocal, selectedDay]);
   const selectableDays = useMemo(() => getSelectableScheduleDays(scheduleMode, anchorDay), [anchorDay, scheduleMode]);
   const [selectedDayKeys, setSelectedDayKeys] = useState<string[]>(() => [toDayKey(selectedDay)]);
+  const backTarget = `/calendar/day/${toDayKey(selectedDay)}`;
 
   useEffect(() => {
     let isActive = true;
@@ -150,6 +151,16 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
       }));
     };
 
+  const handleTimeChange =
+    (field: 'startAtLocal' | 'endAtLocal') => (event: ChangeEvent<HTMLInputElement>) => {
+      const timeValue = event.target.value;
+
+      setForm((current) => ({
+        ...current,
+        [field]: combineDayAndTime(selectedDay, timeValue),
+      }));
+    };
+
   const handleToggleDay = (dayKey: string) => {
     if (scheduleMode === 'single') {
       return;
@@ -238,11 +249,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
         }
       }
 
-      if (window.history.length > 1) {
-        navigate(-1);
-      } else {
-        navigate(`/calendar/day/${toDayKey(anchorDay)}`);
-      }
+      navigate(mode === 'edit' ? backTarget : `/calendar/day/${toDayKey(anchorDay)}`);
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
@@ -251,25 +258,26 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
   };
 
   return (
-    <section className="calendar-page">
-      <div className="exercise-page__header">
+    <section className="calendar-page entity-form-page calendar-session-form-page">
+      <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(backTarget)}>
+        {t('common.back')}
+      </button>
+
+      <div className="exercise-page__header entity-form-page__header">
         <div>
-          <p className="feature-page__eyebrow">{t('calendar.formEyebrow')}</p>
           <h2>{mode === 'edit' ? t('calendar.editSession') : t('calendar.createSession')}</h2>
-          <p>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <p className="calendar-session-form-page__date">
+            {selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
-        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(-1)}>
-          {t('common.back')}
-        </button>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
-      <section className="card calendar-day-panel">
-        {isLoading ? (
-          <p className="exercise-page__state">{t('common.loadingForm')}</p>
-        ) : (
-          <form className="exercise-form" onSubmit={handleSubmit}>
+      {isLoading ? (
+        <p className="exercise-page__state">{t('common.loadingForm')}</p>
+      ) : (
+        <form className="exercise-form entity-form-page__form calendar-session-form" onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="calendar-workspace">{t('common.workspace')}</label>
               <select id="calendar-workspace" value={form.workspaceId} onChange={handleChange('workspaceId')}>
@@ -297,23 +305,27 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             <div className="calendar-form__times">
               <div className="field">
                 <label htmlFor="calendar-start">{t('common.start')}</label>
-                <input id="calendar-start" type="datetime-local" value={form.startAtLocal} onChange={handleChange('startAtLocal')} />
+                <input
+                  id="calendar-start"
+                  type="time"
+                  value={extractTime(form.startAtLocal) ?? '09:00'}
+                  onChange={handleTimeChange('startAtLocal')}
+                />
               </div>
               <div className="field">
                 <label htmlFor="calendar-end">{t('common.end')}</label>
-                <input id="calendar-end" type="datetime-local" value={form.endAtLocal} onChange={handleChange('endAtLocal')} />
+                <input
+                  id="calendar-end"
+                  type="time"
+                  value={extractTime(form.endAtLocal) ?? '10:00'}
+                  onChange={handleTimeChange('endAtLocal')}
+                />
               </div>
             </div>
 
             {mode === 'create' ? (
-              <section className="session-schedule" aria-labelledby="calendar-schedule-title">
-                <div className="session-schedule__intro">
-                  <div>
-                    <p className="feature-page__eyebrow">{t('sessions.scheduleLabel')}</p>
-                    <h3 id="calendar-schedule-title">{t('sessions.scheduleDays')}</h3>
-                    <p>{t('sessions.scheduleHint')}</p>
-                  </div>
-                </div>
+              <section className="session-schedule session-schedule--compact" aria-labelledby="calendar-schedule-title">
+                <h3 id="calendar-schedule-title">{t('sessions.scheduleLabel')}</h3>
 
                 <div className="session-schedule__modes" role="group" aria-label={t('sessions.scheduleLabel')}>
                   <button
@@ -382,8 +394,6 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
                         );
                       })}
                     </div>
-
-                    <p className="hint">{t('sessions.scheduleDaysHint')}</p>
                   </>
                 ) : null}
               </section>
@@ -413,9 +423,8 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
                     ? t('calendar.createSession')
                     : t('sessions.submitAddBulk')}
             </button>
-          </form>
-        )}
-      </section>
+        </form>
+      )}
     </section>
   );
 }

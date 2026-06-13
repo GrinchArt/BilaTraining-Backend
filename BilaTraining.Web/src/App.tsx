@@ -9,6 +9,7 @@ import { CalendarPage as CalendarRoutePage } from './features/calendar/CalendarP
 import { CalendarSessionFormPage as CalendarSessionRoutePage } from './features/calendar/CalendarSessionFormPage';
 import { ClientFormPage, ClientsPage as ClientsRoutePage } from './features/clients/ClientsPage';
 import { ExerciseFormPage, ExercisesPage as ExercisesRoutePage } from './features/exercises/ExercisesPage';
+import { ProfilePage as ProfileRoutePage } from './features/profile/ProfilePage';
 import { ReportsPage as ReportsRoutePage } from './features/reports/ReportsPage';
 import { SessionFormPage, SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
 import { SessionTrackingPage as SessionTrackingRoutePage } from './features/sessions/SessionTrackingPage';
@@ -170,6 +171,14 @@ function App() {
           element={
             <ProtectedRoute>
               <SessionTrackingRoutePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <ProfileRoutePage />
             </ProtectedRoute>
           }
         />

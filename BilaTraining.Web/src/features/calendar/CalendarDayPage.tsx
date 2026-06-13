@@ -7,7 +7,7 @@ import { getJson, sendPatch, sendVoid, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
 import { hexToRgba, normalizeColorHex } from '../../shared/color';
 import type { Client, Session, SessionStatus, Workspace } from '../../shared/models';
-import { formatTimeShort, parseDayKey, startOfDay, toDayKey } from './calendar.utils';
+import { formatTimeShort, parseDayKey, sessionStatusLabel, startOfDay, toDayKey } from './calendar.utils';
 
 const HOUR_SLOT_HEIGHT = 72;
 const MINUTES_IN_DAY = 24 * 60;
@@ -255,8 +255,8 @@ export function CalendarDayPage() {
                       onClick={() => setActiveSessionId(item.session.id)}
                     >
                       <strong>{item.clientName}</strong>
-                      <span>
-                        {formatTimeShort(item.session.startAtUtc, locale)} - {formatTimeShort(item.session.endAtUtc, locale)}
+                      <span className="calendar-session-block__status">
+                        {sessionStatusLabel(item.session.status, t)}
                       </span>
                     </button>
                   ))}
@@ -268,7 +268,7 @@ export function CalendarDayPage() {
       </div>
 
       <div className="calendar-day-page__actions">
-        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(-1)}>
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/calendar')}>
           {t('common.back')}
         </button>
         <button
