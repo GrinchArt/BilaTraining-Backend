@@ -199,7 +199,7 @@ export function CalendarDayPage() {
           <h2>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
         </div>
         <div className="calendar-toolbar">
-          <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
+          <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(-1)}>
             {t('common.back')}
           </button>
         </div>

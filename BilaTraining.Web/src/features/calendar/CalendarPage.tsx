@@ -90,14 +90,14 @@ export function CalendarPage() {
 
       <section className="card calendar-board">
         <div className="calendar-board__header">
-          <button type="button" className="button button--secondary" onClick={() => moveMonth(-1)}>
+          <button type="button" className="button button--ghost button--compact" onClick={() => moveMonth(-1)}>
             {t('common.prev')}
           </button>
           <div className="calendar-board__title">
             <h3>{visibleMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}</h3>
             <p>{t('calendar.activeDays', { count: sessionsByDay.size })}</p>
           </div>
-          <button type="button" className="button button--secondary" onClick={() => moveMonth(1)}>
+          <button type="button" className="button button--ghost button--compact" onClick={() => moveMonth(1)}>
             {t('common.next')}
           </button>
         </div>

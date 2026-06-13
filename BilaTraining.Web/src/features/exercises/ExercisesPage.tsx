@@ -301,7 +301,7 @@ export function ExerciseFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <h2>{mode === 'edit' ? t('exercises.editTitle') : t('exercises.addTitle')}</h2>
           <p>{mode === 'edit' ? t('exercises.editDescription') : t('exercises.addDescription')}</p>
         </div>
-        <button type="button" className="button button--secondary" onClick={() => navigate('/exercises')}>
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/exercises')}>
           {t('common.back')}
         </button>
       </div>

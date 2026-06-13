@@ -26,6 +26,7 @@ export function ReportsPage() {
   const { apiBaseUrl, authenticatedFetch } = useAuth();
   const { locale, t } = useI18n();
   const [period, setPeriod] = useState<ReportPeriod>('month');
+  const [activeTab, setActiveTab] = useState<'overview' | 'progress'>('overview');
   const [anchorDate, setAnchorDate] = useState(() => toDateOnlyString(new Date()));
   const [sessionReport, setSessionReport] = useState<SessionOverviewReport | null>(null);
   const [progressReport, setProgressReport] = useState<ExerciseProgressReport | null>(null);
@@ -174,6 +175,9 @@ export function ReportsPage() {
   const selectedExercise = exercises.find((exercise) => exercise.id === selectedExerciseId) ?? null;
   const periodSource = sessionReport?.period ?? progressReport?.period ?? null;
   const isLoadingAnyReport = isLoadingSessionReport || isLoadingProgressReport;
+  const reportViewLabels = locale.startsWith('uk')
+    ? { overview: '\u041e\u0433\u043b\u044f\u0434', progress: '\u041f\u0440\u043e\u0433\u0440\u0435\u0441' }
+    : { overview: 'Overview', progress: 'Progress' };
 
   return (
     <section className="reports-page">
@@ -184,9 +188,6 @@ export function ReportsPage() {
           <p>{t('reports.description')}</p>
         </div>
       </div>
-
-      {catalogErrorMessage ? <p className="feedback">{catalogErrorMessage}</p> : null}
-      {sessionErrorMessage ? <p className="feedback">{sessionErrorMessage}</p> : null}
 
       <section className="card reports-panel">
         <div className="reports-toolbar">
@@ -208,121 +209,117 @@ export function ReportsPage() {
           </div>
 
           <div className="reports-range-nav">
-            <button type="button" className="button button--secondary" onClick={() => handleMovePeriod('prev')} disabled={!periodSource || isLoadingAnyReport}>
+            <button
+              type="button"
+              className="button button--ghost button--compact"
+              onClick={() => handleMovePeriod('prev')}
+              disabled={!periodSource || isLoadingAnyReport}
+            >
               {t('common.prev')}
             </button>
             <div className="reports-range-nav__label">
               <strong>{visibleRangeLabel || t('reports.loadingPeriod')}</strong>
               <span>{periodSource?.timeZone ?? timeZone}</span>
             </div>
-            <button type="button" className="button button--secondary" onClick={() => handleMovePeriod('next')} disabled={!periodSource || isLoadingAnyReport}>
+            <button
+              type="button"
+              className="button button--ghost button--compact"
+              onClick={() => handleMovePeriod('next')}
+              disabled={!periodSource || isLoadingAnyReport}
+            >
               {t('common.next')}
             </button>
           </div>
         </div>
 
-        <div className="reports-filters">
-          <div className="field">
-            <label htmlFor="reports-client-filter">{t('reports.clientFilter')}</label>
-            <select
-              id="reports-client-filter"
-              value={selectedClientId}
-              onChange={(event) => setSelectedClientId(event.target.value)}
-              disabled={isLoadingCatalogs}
-            >
-              <option value="all">{t('reports.allClients')}</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {formatClientOption(client)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="reports-exercise-filter">{t('reports.exerciseFilter')}</label>
-            <select
-              id="reports-exercise-filter"
-              value={selectedExerciseId}
-              onChange={(event) => setSelectedExerciseId(event.target.value)}
-              disabled={isLoadingCatalogs}
-            >
-              <option value="all">{t('reports.allExercises')}</option>
-              {exercises.map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>
-                  {exercise.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="reports-view-toggle" role="tablist" aria-label={t('nav.reports')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'overview'}
+            className={`reports-view-toggle__button${activeTab === 'overview' ? ' is-active' : ''}`}
+            onClick={() => setActiveTab('overview')}
+          >
+            {reportViewLabels.overview}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'progress'}
+            className={`reports-view-toggle__button${activeTab === 'progress' ? ' is-active' : ''}`}
+            onClick={() => setActiveTab('progress')}
+          >
+            {reportViewLabels.progress}
+          </button>
         </div>
 
-        {isLoadingSessionReport && isLoadingProgressReport ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
+        {activeTab === 'overview' ? (
+          <>
+            {sessionErrorMessage ? <p className="feedback">{sessionErrorMessage}</p> : null}
+            {isLoadingSessionReport ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
+            {!isLoadingSessionReport && sessionReport ? (
+              <div className="reports-layout">
+                <div className="reports-kpis">
+                  <article className="reports-kpi reports-kpi--total">
+                    <span className="reports-kpi__label">{t('reports.totalSessions')}</span>
+                    <strong>{sessionReport.summary.total}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--planned">
+                    <span className="reports-kpi__label">{t('status.planned')}</span>
+                    <strong>{sessionReport.summary.planned}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--completed">
+                    <span className="reports-kpi__label">{t('status.completed')}</span>
+                    <strong>{sessionReport.summary.completed}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--cancelled">
+                    <span className="reports-kpi__label">{t('status.cancelled')}</span>
+                    <strong>{sessionReport.summary.cancelled}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--no-show">
+                    <span className="reports-kpi__label">{t('status.noShow')}</span>
+                    <strong>{sessionReport.summary.noShow}</strong>
+                  </article>
+                </div>
 
-        {!isLoadingSessionReport && sessionReport ? (
+                <div className="reports-grid">
+                  <section className="reports-card">
+                    <div className="reports-card__header">
+                      <h3>{t('reports.dailyTimeline')}</h3>
+                    </div>
+
+                    <div className="reports-chart">
+                      {sessionReport.timeline.map((point) => (
+                        <SessionTimelineBar key={point.date} point={point} maxTotal={maxSessionTimelineTotal} locale={locale} />
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="reports-card">
+                    <div className="reports-card__header">
+                      <h3>{t('reports.statusBreakdown')}</h3>
+                    </div>
+
+                    <div className="reports-status-list">
+                      {sessionReport.byStatus.map((item) => (
+                        <StatusRow key={item.status} item={item} total={sessionReport.summary.total} t={t} />
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </div>
+            ) : null}
+            {!isLoadingSessionReport && !sessionReport && !sessionErrorMessage ? (
+              <p className="exercise-page__state">{t('reports.loading')}</p>
+            ) : null}
+          </>
+        ) : (
           <div className="reports-layout">
-            <div className="reports-kpis">
-              <article className="reports-kpi reports-kpi--total">
-                <span className="reports-kpi__label">{t('reports.totalSessions')}</span>
-                <strong>{sessionReport.summary.total}</strong>
-              </article>
-              <article className="reports-kpi reports-kpi--planned">
-                <span className="reports-kpi__label">{t('status.planned')}</span>
-                <strong>{sessionReport.summary.planned}</strong>
-              </article>
-              <article className="reports-kpi reports-kpi--completed">
-                <span className="reports-kpi__label">{t('status.completed')}</span>
-                <strong>{sessionReport.summary.completed}</strong>
-              </article>
-              <article className="reports-kpi reports-kpi--cancelled">
-                <span className="reports-kpi__label">{t('status.cancelled')}</span>
-                <strong>{sessionReport.summary.cancelled}</strong>
-              </article>
-              <article className="reports-kpi reports-kpi--no-show">
-                <span className="reports-kpi__label">{t('status.noShow')}</span>
-                <strong>{sessionReport.summary.noShow}</strong>
-              </article>
-            </div>
-
-            <div className="reports-grid">
-              <section className="reports-card">
-                <div className="reports-card__header">
-                  <div>
-                    <h3>{t('reports.dailyTimeline')}</h3>
-                    <p>{t('reports.dailyTimelineDescription')}</p>
-                  </div>
-                </div>
-
-                <div className="reports-chart">
-                  {sessionReport.timeline.map((point) => (
-                    <SessionTimelineBar key={point.date} point={point} maxTotal={maxSessionTimelineTotal} locale={locale} />
-                  ))}
-                </div>
-              </section>
-
-              <section className="reports-card">
-                <div className="reports-card__header">
-                  <div>
-                    <h3>{t('reports.statusBreakdown')}</h3>
-                    <p>{t('reports.statusBreakdownDescription')}</p>
-                  </div>
-                </div>
-
-                <div className="reports-status-list">
-                  {sessionReport.byStatus.map((item) => (
-                    <StatusRow key={item.status} item={item} total={sessionReport.summary.total} t={t} />
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            <section className="reports-card">
+            <section className="reports-card reports-card--filters">
               <div className="reports-card__header">
                 <div>
                   <h3>{t('reports.progressTitle')}</h3>
                   <p>
-                    {t('reports.progressDescription')}
-                    {' '}
                     {selectedClient ? t('reports.progressClientHint', { client: formatClientOption(selectedClient) }) : t('reports.progressClientAll')}
                     {' '}
                     {selectedExercise ? t('reports.progressExerciseHint', { exercise: selectedExercise.name }) : t('reports.progressExerciseAll')}
@@ -330,51 +327,88 @@ export function ReportsPage() {
                 </div>
               </div>
 
-              {isLoadingProgressReport ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
-              {!isLoadingProgressReport && progressErrorMessage ? <p className="feedback">{progressErrorMessage}</p> : null}
-              {!isLoadingProgressReport && progressReport ? (
-                <>
-                  <div className="reports-kpis reports-kpis--progress">
-                    <article className="reports-kpi reports-kpi--total">
-                      <span className="reports-kpi__label">{t('reports.completedSessionsMetric')}</span>
-                      <strong>{progressReport.summary.completedSessions}</strong>
-                    </article>
-                    <article className="reports-kpi reports-kpi--planned">
-                      <span className="reports-kpi__label">{t('reports.totalSetsMetric')}</span>
-                      <strong>{progressReport.summary.totalSets}</strong>
-                    </article>
-                    <article className="reports-kpi reports-kpi--completed">
-                      <span className="reports-kpi__label">{t('reports.totalRepetitionsMetric')}</span>
-                      <strong>{progressReport.summary.totalRepetitions}</strong>
-                    </article>
-                    <article className="reports-kpi reports-kpi--cancelled">
-                      <span className="reports-kpi__label">{t('reports.totalVolumeMetric')}</span>
-                      <strong>{formatNumber(progressReport.summary.totalVolume, locale)}</strong>
-                    </article>
-                    <article className="reports-kpi reports-kpi--no-show">
-                      <span className="reports-kpi__label">{t('reports.maxWeightMetric')}</span>
-                      <strong>{formatNumber(progressReport.summary.maxWeight, locale)}</strong>
-                    </article>
-                  </div>
+              {catalogErrorMessage ? <p className="feedback">{catalogErrorMessage}</p> : null}
 
-                  {progressReport.summary.totalSets === 0 ? (
-                    <p className="exercise-page__state">{t('reports.progressEmpty')}</p>
-                  ) : (
-                    <div className="reports-chart reports-chart--progress">
-                      {progressReport.timeline.map((point) => (
-                        <ProgressTimelineBar key={point.date} point={point} maxVolume={maxProgressVolume} locale={locale} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : null}
+              <div className="reports-filters">
+                <div className="field">
+                  <label htmlFor="reports-client-filter">{t('reports.clientFilter')}</label>
+                  <select
+                    id="reports-client-filter"
+                    value={selectedClientId}
+                    onChange={(event) => setSelectedClientId(event.target.value)}
+                    disabled={isLoadingCatalogs}
+                  >
+                    <option value="all">{t('reports.allClients')}</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {formatClientOption(client)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="reports-exercise-filter">{t('reports.exerciseFilter')}</label>
+                  <select
+                    id="reports-exercise-filter"
+                    value={selectedExerciseId}
+                    onChange={(event) => setSelectedExerciseId(event.target.value)}
+                    disabled={isLoadingCatalogs}
+                  >
+                    <option value="all">{t('reports.allExercises')}</option>
+                    {exercises.map((exercise) => (
+                      <option key={exercise.id} value={exercise.id}>
+                        {exercise.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </section>
-          </div>
-        ) : null}
 
-        {!isLoadingSessionReport && !sessionReport && !sessionErrorMessage ? (
-          <p className="exercise-page__state">{t('reports.loading')}</p>
-        ) : null}
+            {progressErrorMessage ? <p className="feedback">{progressErrorMessage}</p> : null}
+            {isLoadingProgressReport ? <p className="exercise-page__state">{t('reports.loading')}</p> : null}
+            {!isLoadingProgressReport && progressReport ? (
+              <section className="reports-card">
+                <div className="reports-kpis reports-kpis--progress">
+                  <article className="reports-kpi reports-kpi--total">
+                    <span className="reports-kpi__label">{t('reports.completedSessionsMetric')}</span>
+                    <strong>{progressReport.summary.completedSessions}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--planned">
+                    <span className="reports-kpi__label">{t('reports.totalSetsMetric')}</span>
+                    <strong>{progressReport.summary.totalSets}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--completed">
+                    <span className="reports-kpi__label">{t('reports.totalRepetitionsMetric')}</span>
+                    <strong>{progressReport.summary.totalRepetitions}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--cancelled">
+                    <span className="reports-kpi__label">{t('reports.totalVolumeMetric')}</span>
+                    <strong>{formatNumber(progressReport.summary.totalVolume, locale)}</strong>
+                  </article>
+                  <article className="reports-kpi reports-kpi--no-show">
+                    <span className="reports-kpi__label">{t('reports.maxWeightMetric')}</span>
+                    <strong>{formatNumber(progressReport.summary.maxWeight, locale)}</strong>
+                  </article>
+                </div>
+
+                {progressReport.summary.totalSets === 0 ? (
+                  <p className="exercise-page__state">{t('reports.progressEmpty')}</p>
+                ) : (
+                  <div className="reports-chart reports-chart--progress">
+                    {progressReport.timeline.map((point) => (
+                      <ProgressTimelineBar key={point.date} point={point} maxVolume={maxProgressVolume} locale={locale} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : null}
+            {!isLoadingProgressReport && !progressReport && !progressErrorMessage ? (
+              <p className="exercise-page__state">{t('reports.loading')}</p>
+            ) : null}
+          </div>
+        )}
       </section>
     </section>
   );

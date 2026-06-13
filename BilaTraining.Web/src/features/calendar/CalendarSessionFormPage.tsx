@@ -258,7 +258,7 @@ export function CalendarSessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <h2>{mode === 'edit' ? t('calendar.editSession') : t('calendar.createSession')}</h2>
           <p>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button type="button" className="button button--secondary" onClick={() => navigate(-1)}>
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(-1)}>
           {t('common.back')}
         </button>
       </div>

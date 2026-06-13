@@ -74,30 +74,30 @@ a {
 .shell__header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 28px 16px 12px;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 8px;
   position: relative;
   z-index: 30;
 }
 
 .shell__header-row {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
 }
 
 .shell__burger {
   display: inline-grid;
   gap: 4px;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
-  box-shadow: 0 10px 24px rgba(15, 56, 150, 0.42);
+  border: 1px solid rgba(84, 111, 184, 0.42);
+  border-radius: 14px;
+  background: rgba(37, 117, 255, 0.14);
+  box-shadow: 0 10px 24px rgba(3, 8, 22, 0.26);
 }
 
 .shell__burger span {
@@ -125,10 +125,16 @@ a {
 }
 
 .shell__header h1 {
-  margin: 4px 0 0;
-  font-size: 28px;
+  margin: 0;
+  font-size: 21px;
   line-height: 1.1;
   color: var(--text);
+}
+
+.shell__header-main p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .shell__eyebrow,
@@ -149,10 +155,10 @@ a {
 .exercise-item {
   position: relative;
   overflow: hidden;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(23, 31, 52, 0.95) 0%, rgba(17, 23, 40, 0.98) 100%);
-  box-shadow: var(--shadow);
+  border-radius: 14px;
+  border: 1px solid rgba(54, 68, 106, 0.88);
+  background: linear-gradient(180deg, rgba(20, 27, 46, 0.94) 0%, rgba(13, 18, 33, 0.98) 100%);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
 }
 
 .shell__profile::before,
@@ -191,15 +197,16 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 0 16px;
+  min-height: 40px;
+  padding: 0 15px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
   color: #ffffff;
   text-decoration: none;
   font-weight: 600;
-  box-shadow: 0 10px 22px rgba(13, 50, 137, 0.38);
+  box-shadow: 0 12px 22px rgba(13, 50, 137, 0.24);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .shell__logout {
@@ -208,10 +215,36 @@ a {
 
 .button--secondary,
 .action-link--secondary {
-  background: linear-gradient(180deg, #2a3451 0%, #202942 100%);
-  border: 1px solid rgba(68, 81, 119, 0.7);
+  background: linear-gradient(180deg, rgba(42, 52, 81, 0.88) 0%, rgba(30, 39, 62, 0.96) 100%);
+  border: 1px solid rgba(68, 81, 119, 0.52);
   color: var(--text);
-  box-shadow: 0 10px 18px rgba(2, 6, 17, 0.28);
+  box-shadow: 0 10px 18px rgba(2, 6, 17, 0.18);
+}
+
+.button--ghost {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(68, 81, 119, 0.55);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-soft);
+  box-shadow: none;
+}
+
+.button--compact {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+}
+
+.page-back-button {
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.page-back-button::before {
+  content: "<";
+  font-weight: 700;
+  line-height: 1;
 }
 
 .button--danger {
@@ -311,7 +344,7 @@ a {
 }
 
 .shell__content {
-  padding: 0 16px 24px;
+  padding: 6px 16px 28px;
 }
 
 .card,
@@ -472,8 +505,31 @@ a {
   margin: 0;
 }
 
+.exercise-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.exercise-page__header > div:first-child {
+  min-width: 0;
+  max-width: 720px;
+}
+
 .exercise-page__header p {
   margin-bottom: 0;
+  color: var(--text-muted);
+}
+
+.exercise-page__header h2 {
+  font-size: clamp(1.85rem, 2vw + 1rem, 2.4rem);
+  line-height: 1.02;
+}
+
+.feature-page__eyebrow {
+  margin-bottom: 8px;
+  color: #8ea4df;
 }
 
 .exercise-page__grid {
@@ -830,6 +886,33 @@ a {
   box-shadow: 0 10px 22px rgba(13, 50, 137, 0.24);
 }
 
+.reports-view-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: fit-content;
+  padding: 5px;
+  border: 1px solid rgba(61, 77, 122, 0.62);
+  border-radius: 14px;
+  background: rgba(9, 15, 30, 0.72);
+}
+
+.reports-view-toggle__button {
+  min-width: 116px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.reports-view-toggle__button.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
 .reports-range-nav {
   display: flex;
   align-items: center;
@@ -962,8 +1045,12 @@ a {
   padding: 16px;
 }
 
+.reports-card--filters {
+  padding-bottom: 18px;
+}
+
 .reports-card__header {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .reports-card__header h3,
@@ -1616,14 +1703,25 @@ a {
 }
 
 .session-tracking-page {
-  padding-bottom: 24px;
+  gap: 12px;
+  padding-bottom: 20px;
+}
+
+.session-tracking-page__header-meta {
+  max-width: 920px;
+}
+
+.session-tracking-topbar {
+  display: grid;
+  gap: 12px;
 }
 
 .session-tracking-summary,
 .session-tracking-add,
 .session-tracking-exercise-card {
   display: grid;
-  gap: 14px;
+  gap: 10px;
+  padding: 14px 16px;
 }
 
 .session-tracking-summary__meta,
@@ -1636,6 +1734,14 @@ a {
   flex-wrap: wrap;
 }
 
+.session-tracking-summary__details {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
 .session-tracking-summary__meta h3,
 .session-tracking-summary__meta p,
 .session-tracking-exercise-card__header h3,
@@ -1644,41 +1750,77 @@ a {
   margin: 0;
 }
 
+.session-tracking-summary__meta h3,
+.session-tracking-exercise-card__header h3 {
+  font-size: 1.35rem;
+}
+
+.session-tracking-add__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.session-tracking-add__header h3 {
+  margin: 0;
+}
+
 .session-tracking-add__hint,
-.session-tracking-exercise-card__header p {
+.session-tracking-exercise-card__header p,
+.session-tracking-summary__meta p {
   color: var(--text-muted);
+}
+
+.session-tracking-add__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.session-tracking-add__form .field {
+  gap: 4px;
+}
+
+.session-tracking-add__form .button {
+  margin-bottom: 1px;
 }
 
 .session-tracking-exercises {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .session-tracking-set-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .session-tracking-set-row {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid rgba(61, 77, 122, 0.72);
   border-radius: 10px;
-  background: rgba(10, 16, 30, 0.72);
+  background: rgba(10, 16, 30, 0.56);
 }
 
 .session-tracking-set-row--new {
   border-style: dashed;
+  background: rgba(10, 16, 30, 0.42);
 }
 
 .session-tracking-set-row__heading strong {
   color: var(--text);
+  font-size: 14px;
 }
 
 .session-tracking-set-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .session-tracking-set-grid__notes {
@@ -1687,6 +1829,18 @@ a {
 
 .session-tracking-inline-actions {
   justify-content: flex-end;
+  gap: 8px;
+}
+
+.session-tracking-inline-actions .button {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.session-tracking-remove-button {
+  color: #ffb3bd;
+  border-color: rgba(255, 91, 110, 0.28);
+  background: rgba(255, 91, 110, 0.08);
 }
 
 .calendar-status-tag--0 {
@@ -1741,7 +1895,7 @@ a {
 @media (min-width: 768px) {
   .shell__header,
   .shell__content {
-    max-width: 1080px;
+    max-width: 1120px;
     margin: 0 auto;
   }
 
@@ -1756,11 +1910,21 @@ a {
   .session-tracking-set-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .session-tracking-topbar {
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+    align-items: start;
+  }
+
+  .session-tracking-exercise-card__header {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 520px) {
   .shell__header {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .shell__profile {
@@ -1782,6 +1946,14 @@ a {
 
   .calendar-day-panel {
     padding: 12px;
+  }
+
+  .exercise-page__header {
+    gap: 12px;
+  }
+
+  .exercise-page__header h2 {
+    font-size: 1.95rem;
   }
 
   .calendar-timeline__scroller {
@@ -1808,8 +1980,13 @@ a {
   }
 
   .reports-period-toggle,
-  .reports-range-nav {
+  .reports-range-nav,
+  .reports-view-toggle {
     width: 100%;
+  }
+
+  .reports-view-toggle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .reports-range-nav {
@@ -1840,6 +2017,32 @@ a {
 
   .calendar-session-block span {
     font-size: 11px;
+  }
+
+  .session-tracking-topbar {
+    gap: 10px;
+  }
+
+  .session-tracking-summary,
+  .session-tracking-add,
+  .session-tracking-exercise-card {
+    padding: 12px;
+  }
+
+  .session-tracking-add__form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-tracking-set-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .session-tracking-inline-actions {
+    justify-content: stretch;
+  }
+
+  .session-tracking-inline-actions .button {
+    flex: 1 1 0;
   }
 
   .calendar-session-modal__header,

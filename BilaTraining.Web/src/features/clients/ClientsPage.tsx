@@ -306,7 +306,7 @@ export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <h2>{mode === 'edit' ? t('clients.editTitle') : t('clients.addTitle')}</h2>
           <p>{mode === 'edit' ? t('clients.editDescription') : t('clients.addDescription')}</p>
         </div>
-        <button type="button" className="button button--secondary" onClick={() => navigate('/clients')}>
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/clients')}>
           {t('common.back')}
         </button>
       </div>

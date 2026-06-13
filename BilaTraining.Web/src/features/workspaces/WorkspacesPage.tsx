@@ -299,7 +299,7 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <h2>{mode === 'edit' ? t('workspaces.editTitle') : t('workspaces.addTitle')}</h2>
           <p>{mode === 'edit' ? t('workspaces.editDescription') : t('workspaces.addDescription')}</p>
         </div>
-        <button type="button" className="button button--secondary" onClick={() => navigate('/workspaces')}>
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/workspaces')}>
           {t('common.back')}
         </button>
       </div>

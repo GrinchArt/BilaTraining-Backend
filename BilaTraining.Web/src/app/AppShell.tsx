@@ -59,8 +59,8 @@ export function AppShell() {
           </button>
 
           <div className="shell__header-main">
-            <p className="shell__eyebrow">{t('app.name')}</p>
-            <h1>{t('app.dashboard')}</h1>
+            <h1>{t('app.name')}</h1>
+            <p>{t('app.dashboard')}</p>
           </div>
         </div>
       </header>

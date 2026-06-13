@@ -219,7 +219,7 @@ export function SessionFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <h2>{mode === 'edit' ? t('sessions.editTitle') : t('sessions.addTitle')}</h2>
           <p>{mode === 'edit' ? t('sessions.editDescription') : t('sessions.addDescription')}</p>
         </div>
-        <button type="button" className="button button--secondary" onClick={() => navigate('/sessions')}>
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/sessions')}>
           {t('common.back')}
         </button>
       </div>
