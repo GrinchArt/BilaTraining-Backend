@@ -20,6 +20,7 @@ const emptyForm: WorkspaceFormState = {
 };
 
 export function WorkspacesPage() {
+  const PAGE_SIZE = 25;
   const { apiBaseUrl, authenticatedFetch } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -28,7 +29,14 @@ export function WorkspacesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const activeWorkspace = useMemo(
+    () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
+    [activeWorkspaceId, workspaces],
+  );
 
   const loadWorkspaces = useCallback(async () => {
     setIsLoading(true);
@@ -77,6 +85,21 @@ export function WorkspacesPage() {
     };
   }, [openMenuId]);
 
+  useEffect(() => {
+    if (!activeWorkspaceId) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveWorkspaceId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeWorkspaceId]);
+
   const filteredWorkspaces = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -85,10 +108,24 @@ export function WorkspacesPage() {
 
     return workspaces.filter((workspace) => workspace.name.toLowerCase().includes(normalizedQuery));
   }, [search, workspaces]);
+  const totalPages = Math.max(Math.ceil(filteredWorkspaces.length / PAGE_SIZE), 1);
+  const pagedWorkspaces = useMemo(
+    () => filteredWorkspaces.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredWorkspaces, page],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
 
   const handleDelete = async (workspace: Workspace) => {
     setIsDeletingId(workspace.id);
     setOpenMenuId(null);
+    setActiveWorkspaceId((current) => (current === workspace.id ? null : current));
     setErrorMessage('');
 
     try {
@@ -102,28 +139,23 @@ export function WorkspacesPage() {
   };
 
   return (
-    <section className="exercise-page">
-      <div className="exercise-page__header">
+    <section className="exercise-page workspaces-page">
+      <div className="exercise-page__header clients-page__header">
         <div>
-          <p className="feature-page__eyebrow">{t('nav.workspaces')}</p>
           <h2>{t('workspaces.title')}</h2>
+        </div>
+        <div className="exercise-page__section-actions">
+          <span className="exercise-page__count">{filteredWorkspaces.length}</span>
+          <button type="button" className="exercise-page__count-button" aria-label={t('workspaces.add')} onClick={() => navigate('/workspaces/new')}>
+            +
+          </button>
         </div>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
       <div className="exercise-page__grid exercise-page__grid--single">
-        <section className="card">
-          <div className="exercise-page__section-header">
-            <h3>{t('workspaces.list')}</h3>
-            <div className="exercise-page__section-actions">
-              <span className="exercise-page__count">{filteredWorkspaces.length}</span>
-              <button type="button" className="exercise-page__count-button" aria-label={t('workspaces.add')} onClick={() => navigate('/workspaces/new')}>
-                +
-              </button>
-            </div>
-          </div>
-
+        <section className="clients-panel">
           <div className="field">
             <label htmlFor="workspace-search">{t('workspaces.searchLabel')}</label>
             <input id="workspace-search" type="search" placeholder={t('workspaces.searchPlaceholder')} value={search} onChange={(event) => setSearch(event.target.value)} />
@@ -134,24 +166,16 @@ export function WorkspacesPage() {
             <p className="exercise-page__state">{workspaces.length === 0 ? t('workspaces.empty') : t('workspaces.emptySearch')}</p>
           ) : null}
           {!isLoading && filteredWorkspaces.length > 0 ? (
-            <div className="data-table data-table--workspaces">
-              <div className="data-table__header" aria-hidden="true">
-                <span>{t('common.workspace')}</span>
-                <span>{t('common.description')}</span>
-                <span></span>
-              </div>
-              {filteredWorkspaces.map((workspace) => (
-                <article key={workspace.id} className="data-table__row">
-                  <div className="data-table__cell" data-label={t('common.workspace')}>
-                    <div className="data-table__primary">
-                      <span className="workspace-item__swatch" style={{ backgroundColor: normalizeColorHex(workspace.colorHex) }} aria-hidden="true"></span>
-                      <strong>{workspace.name}</strong>
-                    </div>
-                  </div>
-                  <div className="data-table__cell" data-label={t('common.description')}>
-                    <span className={workspace.description ? undefined : 'exercise-item__muted'}>{workspace.description ?? t('common.noDescription')}</span>
-                  </div>
-                  <div className="data-table__cell data-table__cell--actions">
+            <>
+              <div className="client-list">
+                {pagedWorkspaces.map((workspace) => (
+                  <article key={workspace.id} className="client-list__item">
+                    <button type="button" className="client-list__trigger" onClick={() => setActiveWorkspaceId(workspace.id)}>
+                      <div className="data-table__primary">
+                        <span className="workspace-item__swatch" style={{ backgroundColor: normalizeColorHex(workspace.colorHex) }} aria-hidden="true"></span>
+                        <strong>{workspace.name}</strong>
+                      </div>
+                    </button>
                     <div className="data-table__menu">
                       <button
                         type="button"
@@ -180,13 +204,58 @@ export function WorkspacesPage() {
                         </div>
                       ) : null}
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+
+              {filteredWorkspaces.length > PAGE_SIZE ? (
+                <div className="list-pagination">
+                  <button type="button" className="button button--ghost button--compact" onClick={() => setPage((current) => Math.max(current - 1, 1))} disabled={page === 1}>
+                    {t('common.prev')}
+                  </button>
+                  <span className="list-pagination__label">
+                    {page} / {totalPages}
+                  </span>
+                  <button type="button" className="button button--ghost button--compact" onClick={() => setPage((current) => Math.min(current + 1, totalPages))} disabled={page === totalPages}>
+                    {t('common.next')}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </section>
       </div>
+
+      {activeWorkspace ? (
+        <div className="client-modal" role="dialog" aria-modal="true" aria-labelledby="workspace-modal-title">
+          <button type="button" className="client-modal__scrim" aria-label={t('common.close')} onClick={() => setActiveWorkspaceId(null)} />
+
+          <section className="card client-modal__card">
+            <div className="client-modal__header">
+              <div className="workspace-modal__title">
+                <span className="workspace-item__swatch" style={{ backgroundColor: normalizeColorHex(activeWorkspace.colorHex) }} aria-hidden="true"></span>
+                <h3 id="workspace-modal-title">{activeWorkspace.name}</h3>
+              </div>
+
+              <button type="button" className="client-modal__close" aria-label={t('common.close')} onClick={() => setActiveWorkspaceId(null)}>
+                x
+              </button>
+            </div>
+
+            <div className="client-modal__body">
+              <div className="client-modal__field">
+                <p className="client-modal__label">{t('common.description')}</p>
+                <p className={activeWorkspace.description ? undefined : 'exercise-item__muted'}>{activeWorkspace.description ?? t('common.noDescription')}</p>
+              </div>
+
+              <div className="client-modal__field">
+                <p className="client-modal__label">{t('common.color')}</p>
+                <p className="data-table__mono">{normalizeColorHex(activeWorkspace.colorHex)}</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -292,49 +361,46 @@ export function WorkspaceFormPage({ mode }: { mode: 'create' | 'edit' }) {
   };
 
   return (
-    <section className="exercise-page">
-      <div className="exercise-page__header">
+    <section className="exercise-page entity-form-page">
+      <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/workspaces')}>
+        {t('common.back')}
+      </button>
+
+      <div className="exercise-page__header entity-form-page__header">
         <div>
-          <p className="feature-page__eyebrow">{t('nav.workspaces')}</p>
           <h2>{mode === 'edit' ? t('workspaces.editTitle') : t('workspaces.addTitle')}</h2>
-          <p>{mode === 'edit' ? t('workspaces.editDescription') : t('workspaces.addDescription')}</p>
         </div>
-        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate('/workspaces')}>
-          {t('common.back')}
-        </button>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
-      <section className="card calendar-day-panel">
-        {isLoading ? (
-          <p className="exercise-page__state">{t('common.loadingForm')}</p>
-        ) : (
-          <form className="exercise-form" onSubmit={handleSubmit}>
-            <div className="field">
-              <label htmlFor="workspace-name">{t('common.name')}</label>
-              <input id="workspace-name" type="text" value={form.name} onChange={handleChange('name')} />
-            </div>
+      {isLoading ? (
+        <p className="exercise-page__state">{t('common.loadingForm')}</p>
+      ) : (
+        <form className="exercise-form entity-form-page__form" onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="workspace-name">{t('common.name')}</label>
+            <input id="workspace-name" type="text" value={form.name} onChange={handleChange('name')} />
+          </div>
 
-            <div className="field">
-              <label htmlFor="workspace-description">{t('common.description')}</label>
-              <textarea id="workspace-description" rows={4} value={form.description} onChange={handleChange('description')} />
-            </div>
+          <div className="field">
+            <label htmlFor="workspace-description">{t('common.description')}</label>
+            <textarea id="workspace-description" rows={4} value={form.description} onChange={handleChange('description')} />
+          </div>
 
-            <div className="field">
-              <label htmlFor="workspace-color">{t('common.color')}</label>
-              <div className="workspace-color-field">
-                <input id="workspace-color" className="workspace-color-field__picker" type="color" value={normalizeColorHex(form.colorHex)} onChange={handleChange('colorHex')} />
-                <span className="workspace-color-field__value">{normalizeColorHex(form.colorHex)}</span>
-              </div>
+          <div className="field">
+            <label htmlFor="workspace-color">{t('common.color')}</label>
+            <div className="workspace-color-field">
+              <input id="workspace-color" className="workspace-color-field__picker" type="color" value={normalizeColorHex(form.colorHex)} onChange={handleChange('colorHex')} />
+              <span className="workspace-color-field__value">{normalizeColorHex(form.colorHex)}</span>
             </div>
+          </div>
 
-            <button className="submit-button" type="submit" disabled={isSaving}>
-              {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('workspaces.submitAdd')}
-            </button>
-          </form>
-        )}
-      </section>
+          <button className="submit-button" type="submit" disabled={isSaving}>
+            {isSaving ? t('common.saving') : mode === 'edit' ? t('common.saveChanges') : t('workspaces.submitAdd')}
+          </button>
+        </form>
+      )}
     </section>
   );
 }

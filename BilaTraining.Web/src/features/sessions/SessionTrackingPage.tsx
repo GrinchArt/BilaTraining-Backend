@@ -333,15 +333,15 @@ export function SessionTrackingPage() {
 
   return (
     <section className="exercise-page session-tracking-page">
-      <div className="exercise-page__header">
-        <div>
+      <div className="session-tracking-page__header">
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(backTarget)}>
+          {t('common.back')}
+        </button>
+        <div className="session-tracking-page__heading">
           <p className="feature-page__eyebrow">{t('tracking.title')}</p>
           <h2>{sessionClient ? formatClientName(sessionClient) : t('sessions.notFound')}</h2>
           <p className="session-tracking-page__header-meta">{sessionSummaryLabel}</p>
         </div>
-        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(backTarget)}>
-          {t('common.back')}
-        </button>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
@@ -352,49 +352,33 @@ export function SessionTrackingPage() {
         </section>
       ) : session ? (
         <>
-          <div className="session-tracking-topbar">
-            <section className="card session-tracking-summary">
-              <div className="session-tracking-summary__meta">
-                <div>
-                  <p className="feature-page__eyebrow">{t('common.session')}</p>
-                  <h3>{formatSessionWindow(session.startAtUtc, session.endAtUtc, locale)}</h3>
-                  <div className="session-tracking-summary__details">
-                    <span>{sessionWorkspace?.name ?? t('common.unknownWorkspace')}</span>
-                    <span className={`exercise-item__tag calendar-status-tag calendar-status-tag--${session.status}`}>
-                      {sessionStatusLabel(session.status, t)}
-                    </span>
-                  </div>
+          <section className="card session-tracking-add">
+            <div className="session-tracking-add__header">
+              <h3>{t('tracking.addExerciseTitle')}</h3>
+              {isRefreshing ? <span className="exercise-page__state">{t('tracking.refreshing')}</span> : null}
+            </div>
+
+            {availableExercises.length > 0 ? (
+              <form className="session-tracking-add__form" onSubmit={handleAddExercise}>
+                <div className="field">
+                  <label htmlFor="tracking-exercise">{t('tracking.exerciseLabel')}</label>
+                  <select id="tracking-exercise" value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)}>
+                    {availableExercises.map((exercise) => (
+                      <option key={exercise.id} value={exercise.id}>
+                        {exercise.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                {isRefreshing ? <span className="exercise-page__state">{t('tracking.refreshing')}</span> : null}
-              </div>
-            </section>
 
-            <section className="card session-tracking-add">
-              <div className="session-tracking-add__header">
-                <h3>{t('tracking.addExerciseTitle')}</h3>
-                {availableExercises.length === 0 ? <span className="exercise-page__state">{t('tracking.noExercisesAvailable')}</span> : null}
-              </div>
-
-              {availableExercises.length > 0 ? (
-                <form className="session-tracking-add__form" onSubmit={handleAddExercise}>
-                  <div className="field">
-                    <label htmlFor="tracking-exercise">{t('tracking.exerciseLabel')}</label>
-                    <select id="tracking-exercise" value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)}>
-                      {availableExercises.map((exercise) => (
-                        <option key={exercise.id} value={exercise.id}>
-                          {exercise.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button className="submit-button button--compact" type="submit" disabled={isAddingExercise}>
-                    {isAddingExercise ? t('common.saving') : t('tracking.addExerciseSubmit')}
-                  </button>
-                </form>
-              ) : null}
-            </section>
-          </div>
+                <button className="submit-button button--compact" type="submit" disabled={isAddingExercise}>
+                  {isAddingExercise ? t('common.saving') : t('tracking.addExerciseSubmit')}
+                </button>
+              </form>
+            ) : (
+              <p className="exercise-page__state">{t('tracking.noExercisesAvailable')}</p>
+            )}
+          </section>
 
           <section className="session-tracking-exercises">
             {trackedExercises.length === 0 ? (
@@ -405,26 +389,26 @@ export function SessionTrackingPage() {
               trackedExercises.map((sessionExercise) => (
                 <article key={sessionExercise.id} className="card session-tracking-exercise-card">
                   <div className="session-tracking-exercise-card__header">
-                    <div>
+                    <div className="session-tracking-exercise-card__title">
                       <p className="feature-page__eyebrow">{t('tracking.exerciseLabel')}</p>
                       <h3>{sessionExercise.exercise?.name ?? t('tracking.unknownExercise')}</h3>
                       <p>{sessionExercise.exercise?.category ?? t('common.noCategory')}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="button button--ghost button--compact session-tracking-remove-button"
-                      disabled={removingExerciseId === sessionExercise.id}
-                      onClick={() => void handleRemoveExercise(sessionExercise.id)}
-                    >
-                      {removingExerciseId === sessionExercise.id ? t('common.deleting') : t('tracking.removeExercise')}
-                    </button>
+                    <div className="session-tracking-exercise-card__actions">
+                      <span className="exercise-page__count">{sessionExercise.sets.length}</span>
+                      <button
+                        type="button"
+                        className="button button--ghost button--compact session-tracking-remove-button"
+                        disabled={removingExerciseId === sessionExercise.id}
+                        onClick={() => void handleRemoveExercise(sessionExercise.id)}
+                      >
+                        {removingExerciseId === sessionExercise.id ? t('common.deleting') : t('tracking.removeExercise')}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="session-tracking-set-list">
-                    <div className="exercise-page__section-header">
-                      <h4>{t('tracking.setsTitle')}</h4>
-                      <span className="exercise-page__count">{sessionExercise.sets.length}</span>
-                    </div>
+                    <h4 className="session-tracking-set-list__title">{t('tracking.setsTitle')}</h4>
 
                     {sessionExercise.sets.length === 0 ? <p className="exercise-page__state">{t('tracking.noSets')}</p> : null}
 

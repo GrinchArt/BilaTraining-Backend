@@ -192,23 +192,17 @@ export function CalendarDayPage() {
   };
 
   return (
-    <section className="calendar-page">
-      <div className="exercise-page__header">
+    <section className="calendar-page calendar-day-page">
+      <div className="exercise-page__header calendar-day-page__header">
         <div>
-          <p className="feature-page__eyebrow">{t('calendar.dayEyebrow')}</p>
           <h2>{selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
-        </div>
-        <div className="calendar-toolbar">
-          <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(-1)}>
-            {t('common.back')}
-          </button>
         </div>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
       <div className="calendar-page__grid calendar-page__grid--detail">
-        <section className="card calendar-day-panel calendar-day-panel--timeline">
+        <section className="calendar-day-panel calendar-day-panel--timeline calendar-day-panel--flush">
           <div className="exercise-page__section-header">
             <h3>{t('calendar.sessionsTitle')}</h3>
             <span className="exercise-page__count">{selectedDaySessions.length}</span>
@@ -273,14 +267,19 @@ export function CalendarDayPage() {
         </section>
       </div>
 
-      <button
-        type="button"
-        className="calendar-page__fab"
-        aria-label={t('calendar.addSession')}
-        onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/new`)}
-      >
-        +
-      </button>
+      <div className="calendar-day-page__actions">
+        <button type="button" className="button button--ghost page-back-button" onClick={() => navigate(-1)}>
+          {t('common.back')}
+        </button>
+        <button
+          type="button"
+          className="calendar-day-page__add-button"
+          aria-label={t('calendar.addSession')}
+          onClick={() => navigate(`/calendar/day/${toDayKey(selectedDay)}/session/new`)}
+        >
+          +
+        </button>
+      </div>
 
       {activeTimelineSession ? (
         <div className="calendar-session-modal" role="dialog" aria-modal="true" aria-labelledby="calendar-session-modal-title">

@@ -81,14 +81,13 @@ export function CalendarPage() {
     <section className="calendar-page">
       <div className="exercise-page__header">
         <div>
-          <p className="feature-page__eyebrow">{t('calendar.title')}</p>
           <h2>{t('calendar.title')}</h2>
         </div>
       </div>
 
       {errorMessage ? <p className="feedback">{errorMessage}</p> : null}
 
-      <section className="card calendar-board">
+      <section className="calendar-board calendar-board--flush">
         <div className="calendar-board__header">
           <button type="button" className="button button--ghost button--compact" onClick={() => moveMonth(-1)}>
             {t('common.prev')}
