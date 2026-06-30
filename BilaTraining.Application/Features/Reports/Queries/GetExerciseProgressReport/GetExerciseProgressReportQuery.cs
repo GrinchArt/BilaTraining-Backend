@@ -7,6 +7,7 @@ public sealed record GetExerciseProgressReportQuery(
     string? Period = null,
     DateOnly? AnchorDate = null,
     string? TimeZone = null,
+    Guid? WorkspaceId = null,
     Guid? ClientId = null,
     Guid? ExerciseId = null
 ) : IRequest<ExerciseProgressReportDto>;

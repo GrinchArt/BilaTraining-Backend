@@ -12,6 +12,7 @@ import type {
   SessionOverviewReport,
   SessionOverviewStatus,
   SessionOverviewTimelinePoint,
+  Workspace,
 } from '../../shared/models';
 import { sessionStatusLabel } from '../calendar/calendar.utils';
 
@@ -32,6 +33,8 @@ export function ReportsPage() {
   const [progressReport, setProgressReport] = useState<ExerciseProgressReport | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('all');
   const [selectedClientId, setSelectedClientId] = useState('all');
   const [selectedExerciseId, setSelectedExerciseId] = useState('all');
   const [isLoadingSessionReport, setIsLoadingSessionReport] = useState(true);
@@ -48,13 +51,15 @@ export function ReportsPage() {
     setCatalogErrorMessage('');
 
     try {
-      const [nextClients, nextExercises] = await Promise.all([
+      const [nextClients, nextExercises, nextWorkspaces] = await Promise.all([
         getJson<Client[]>(`${apiBaseUrl}/clients`, authenticatedFetch, t('clients.loadFailed')),
         getJson<Exercise[]>(`${apiBaseUrl}/exercises`, authenticatedFetch, t('exercises.loadFailed')),
+        getJson<Workspace[]>(`${apiBaseUrl}/workspaces`, authenticatedFetch, t('workspaces.loadFailed')),
       ]);
 
       setClients(nextClients);
       setExercises(nextExercises);
+      setWorkspaces(nextWorkspaces);
     } catch (error) {
       setCatalogErrorMessage(toMessage(error));
     } finally {
@@ -72,6 +77,10 @@ export function ReportsPage() {
         anchorDate,
         timeZone,
       });
+
+      if (selectedWorkspaceId !== 'all') {
+        overviewSearch.set('workspaceId', selectedWorkspaceId);
+      }
 
       const nextSessionReport = await getJson<SessionOverviewReport>(
         `${apiBaseUrl}/reports/sessions-overview?${overviewSearch.toString()}`,
@@ -99,6 +108,10 @@ export function ReportsPage() {
         timeZone,
       });
 
+      if (selectedWorkspaceId !== 'all') {
+        progressSearch.set('workspaceId', selectedWorkspaceId);
+      }
+
       if (selectedClientId !== 'all') {
         progressSearch.set('clientId', selectedClientId);
       }
@@ -120,7 +133,7 @@ export function ReportsPage() {
     } finally {
       setIsLoadingProgressReport(false);
     }
-  }, [anchorDate, apiBaseUrl, authenticatedFetch, period, selectedClientId, selectedExerciseId, t, timeZone]);
+  }, [anchorDate, apiBaseUrl, authenticatedFetch, period, selectedClientId, selectedExerciseId, selectedWorkspaceId, t, timeZone]);
 
   useEffect(() => {
     void loadCatalogs();
@@ -133,6 +146,16 @@ export function ReportsPage() {
   useEffect(() => {
     void loadProgressReport();
   }, [loadProgressReport]);
+
+  useEffect(() => {
+    if (selectedWorkspaceId === 'all') {
+      return;
+    }
+
+    if (!workspaces.some((workspace) => workspace.id === selectedWorkspaceId)) {
+      setSelectedWorkspaceId('all');
+    }
+  }, [selectedWorkspaceId, workspaces]);
 
   const maxSessionTimelineTotal = useMemo(
     () => Math.max(...(sessionReport?.timeline.map((point) => point.total) ?? [0]), 1),
@@ -171,6 +194,7 @@ export function ReportsPage() {
     setAnchorDate(direction === 'prev' ? periodSource.previousAnchorDate : periodSource.nextAnchorDate);
   };
 
+  const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? null;
   const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null;
   const selectedExercise = exercises.find((exercise) => exercise.id === selectedExerciseId) ?? null;
   const periodSource = sessionReport?.period ?? progressReport?.period ?? null;
@@ -253,6 +277,36 @@ export function ReportsPage() {
           </button>
         </div>
 
+        <section className="reports-card reports-card--filters">
+          <div className="reports-card__header">
+            <div>
+              <h3>{t('reports.scopeTitle')}</h3>
+              <p>{selectedWorkspace ? t('reports.workspaceHint', { workspace: selectedWorkspace.name }) : t('reports.workspaceAll')}</p>
+            </div>
+          </div>
+
+          {catalogErrorMessage ? <p className="feedback">{catalogErrorMessage}</p> : null}
+
+          <div className="reports-filters">
+            <div className="field">
+              <label htmlFor="reports-workspace-filter">{t('reports.workspaceFilter')}</label>
+              <select
+                id="reports-workspace-filter"
+                value={selectedWorkspaceId}
+                onChange={(event) => setSelectedWorkspaceId(event.target.value)}
+                disabled={isLoadingCatalogs}
+              >
+                <option value="all">{t('reports.allWorkspaces')}</option>
+                {workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+
         {activeTab === 'overview' ? (
           <>
             {sessionErrorMessage ? <p className="feedback">{sessionErrorMessage}</p> : null}
@@ -326,9 +380,6 @@ export function ReportsPage() {
                   </p>
                 </div>
               </div>
-
-              {catalogErrorMessage ? <p className="feedback">{catalogErrorMessage}</p> : null}
-
               <div className="reports-filters">
                 <div className="field">
                   <label htmlFor="reports-client-filter">{t('reports.clientFilter')}</label>

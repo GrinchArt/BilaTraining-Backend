@@ -50,6 +50,7 @@ public sealed class ReportsController : ControllerBase
         [FromQuery] string? period,
         [FromQuery] DateOnly? anchorDate,
         [FromQuery] string? timeZone,
+        [FromQuery] Guid? workspaceId,
         [FromQuery] Guid? clientId,
         [FromQuery] Guid? exerciseId,
         CancellationToken ct)
@@ -57,7 +58,7 @@ public sealed class ReportsController : ControllerBase
         try
         {
             var report = await _dispatcher.Send(
-                new GetExerciseProgressReportQuery(period, anchorDate, timeZone, clientId, exerciseId),
+                new GetExerciseProgressReportQuery(period, anchorDate, timeZone, workspaceId, clientId, exerciseId),
                 ct);
 
             return Ok(report);

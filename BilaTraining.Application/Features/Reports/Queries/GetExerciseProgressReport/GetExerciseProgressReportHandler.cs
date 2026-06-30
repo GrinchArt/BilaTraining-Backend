@@ -32,12 +32,16 @@ public sealed class GetExerciseProgressReportHandler(
             select new
             {
                 session.Id,
+                session.WorkspaceId,
                 session.ClientId,
                 sessionExercise.ExerciseId,
                 SessionStartAtUtc = session.StartAtUtc,
                 set.Repetitions,
                 set.Weight,
             };
+
+        if (request.WorkspaceId.HasValue)
+            query = query.Where(item => item.WorkspaceId == request.WorkspaceId.Value);
 
         if (request.ClientId.HasValue)
             query = query.Where(item => item.ClientId == request.ClientId.Value);
