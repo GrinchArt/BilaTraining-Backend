@@ -17,15 +17,3 @@ OPENAI_API_SECRET=sk-prod-real-key
 DATABASE_URL=postgres://prod-user:prod-password@prod-db:5432/app
 JWT_SECRET=my-production-secret
 
-
-OPENAI_CLIENT_SECRET=sk-prod-real-key
-DATABASE_URL=postgres://prod-user:prod-password@prod-db:5432/app
-JWT_SECRET=my-production-secret
-
-OPENAI_API_KEY=sk-prod-real-key
-DATABASE_URL=postgres://prod-user:prod-password@prod-db:5432/app
-JWT_SECRET=my-production-secret
-
-OPENAI_API_KEY=sk-prod-real-key
-DATABASE_URL=postgres://prod-user:prod-password@prod-db:5432/app
-JWT_SECRET=my-production-secret
