@@ -5,6 +5,7 @@ namespace BilaTraining.Domain.Entities;
 public sealed class Client : AuditableEntity
 {
     public Guid UserId { get; private set; }
+    public Guid? LinkedUserId { get; private set; }
 
     public string FirstName { get; private set; } = default!;
     public string? LastName { get; private set; }
@@ -30,6 +31,15 @@ public sealed class Client : AuditableEntity
     public void UpdateNotes(string? notes)
     {
         Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        MarkUpdated();
+    }
+
+    public void LinkUser(Guid userId)
+    {
+        if (LinkedUserId.HasValue && LinkedUserId.Value != userId)
+            throw new InvalidOperationException("This client is already linked to another account.");
+
+        LinkedUserId = userId;
         MarkUpdated();
     }
 

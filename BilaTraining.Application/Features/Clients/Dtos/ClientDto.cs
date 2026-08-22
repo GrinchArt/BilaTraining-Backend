@@ -1,3 +1,5 @@
+using BilaTraining.Domain.Enums;
+
 namespace BilaTraining.Application.Features.Clients.Dtos;
 
 public sealed record ClientDto(
@@ -6,5 +8,7 @@ public sealed record ClientDto(
     string? LastName,
     string? Phone,
     string? Email,
-    string? Notes
+    string? Notes,
+    CoachClientRelationshipStatus RelationshipStatus,
+    bool IsLinked
 );

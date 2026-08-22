@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace BilaTraining.Api.Controllers;
 
@@ -14,17 +15,20 @@ namespace BilaTraining.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly UserManager<AppUser> _userManager;
+    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
     private readonly JwtTokenGenerator _jwtTokenGenerator;
     private readonly JwtOptions _jwtOptions;
     private readonly ApplicationDbContext _dbContext;
 
     public AuthController(
         UserManager<AppUser> userManager,
+        RoleManager<IdentityRole<Guid>> roleManager,
         JwtTokenGenerator jwtTokenGenerator,
         JwtOptions jwtOptions,
         ApplicationDbContext dbContext)
     {
         _userManager = userManager;
+        _roleManager = roleManager;
         _jwtTokenGenerator = jwtTokenGenerator;
         _jwtOptions = jwtOptions;
         _dbContext = dbContext;
@@ -51,6 +55,14 @@ public sealed class AuthController : ControllerBase
         if (!result.Succeeded)
             return BadRequest(new { errors = result.Errors.Select(e => e.Description).ToArray() });
 
+        var initialRole = await IsInvitationTokenActiveAsync(request.InvitationToken, HttpContext.RequestAborted)
+            ? AppRoles.Client
+            : AppRoles.Trainer;
+        await EnsureRoleAsync(initialRole);
+        var roleResult = await _userManager.AddToRoleAsync(user, initialRole);
+        if (!roleResult.Succeeded)
+            return BadRequest(new { errors = roleResult.Errors.Select(e => e.Description).ToArray() });
+
         var response = await IssueAuthResponseAsync(user, HttpContext.RequestAborted);
         return Ok(response);
     }
@@ -66,6 +78,15 @@ public sealed class AuthController : ControllerBase
         var validPassword = await _userManager.CheckPasswordAsync(user, request.Password);
         if (!validPassword)
             return Unauthorized(new { message = "Invalid email or password." });
+
+        if ((await _userManager.GetRolesAsync(user)).Count == 0)
+        {
+            var initialRole = await IsInvitationTokenActiveAsync(request.InvitationToken, HttpContext.RequestAborted)
+                ? AppRoles.Client
+                : AppRoles.Trainer;
+            await EnsureRoleAsync(initialRole);
+            await _userManager.AddToRoleAsync(user, initialRole);
+        }
 
         var response = await IssueAuthResponseAsync(user, HttpContext.RequestAborted);
         return Ok(response);
@@ -112,7 +133,8 @@ public sealed class AuthController : ControllerBase
         CancellationToken ct,
         RefreshToken? replacedToken = null)
     {
-        var accessToken = _jwtTokenGenerator.GenerateToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles);
         var refreshTokenValue = CreateRefreshTokenValue();
 
         var refreshToken = new RefreshToken
@@ -132,7 +154,33 @@ public sealed class AuthController : ControllerBase
         _dbContext.RefreshTokens.Add(refreshToken);
         await _dbContext.SaveChangesAsync(ct);
 
-        return new AuthResponse(accessToken, refreshTokenValue, user.Id, user.Email!, user.DisplayName);
+        return new AuthResponse(accessToken, refreshTokenValue, user.Id, user.Email!, user.DisplayName, roles.ToArray());
+    }
+
+    private async Task EnsureRoleAsync(string roleName)
+    {
+        if (await _roleManager.RoleExistsAsync(roleName))
+            return;
+
+        var result = await _roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+        if (!result.Succeeded)
+            throw new InvalidOperationException($"Could not create role '{roleName}'.");
+    }
+
+    private async Task<bool> IsInvitationTokenActiveAsync(string? token, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        var tokenHash = Convert.ToHexString(hash).ToLowerInvariant();
+
+        return await _dbContext.ClientInvitations.AnyAsync(
+            invitation => invitation.TokenHash == tokenHash &&
+                          invitation.AcceptedAtUtc == null &&
+                          invitation.RevokedAtUtc == null &&
+                          invitation.ExpiresAtUtc > DateTime.UtcNow,
+            ct);
     }
 
     private static string CreateRefreshTokenValue()
@@ -145,9 +193,9 @@ public sealed class AuthController : ControllerBase
             .TrimEnd('=');
     }
 
-    public sealed record RegisterRequest(string Email, string Password, string? DisplayName);
+    public sealed record RegisterRequest(string Email, string Password, string? DisplayName, string? InvitationToken);
 
-    public sealed record LoginRequest(string Email, string Password);
+    public sealed record LoginRequest(string Email, string Password, string? InvitationToken);
 
     public sealed record RefreshRequest(string RefreshToken);
 
@@ -158,5 +206,6 @@ public sealed class AuthController : ControllerBase
         string RefreshToken,
         Guid UserId,
         string Email,
-        string? DisplayName);
+        string? DisplayName,
+        IReadOnlyList<string> Roles);
 }

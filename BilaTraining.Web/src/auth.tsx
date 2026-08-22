@@ -12,23 +12,29 @@ import { translateStatic } from './i18n';
 const AUTH_STORAGE_KEY = 'bila-training.auth-session';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5175/api';
 
+export const TRAINER_ROLE = 'Trainer';
+export const CLIENT_ROLE = 'Client';
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   userId: string;
   email: string;
   displayName: string | null;
+  roles: string[];
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+  invitationToken: string | null;
 }
 
 export interface RegisterRequest {
   email: string;
   password: string;
   displayName: string | null;
+  invitationToken: string | null;
 }
 
 export interface AuthSession {
@@ -37,6 +43,7 @@ export interface AuthSession {
   userId: string;
   email: string;
   displayName: string | null;
+  roles: string[];
 }
 
 export type AuthenticatedFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -48,6 +55,7 @@ interface AuthContextValue {
   login: (request: LoginRequest) => Promise<AuthSession>;
   register: (request: RegisterRequest) => Promise<AuthSession>;
   logout: () => void;
+  refresh: () => Promise<AuthSession | null>;
   authenticatedFetch: AuthenticatedFetch;
 }
 
@@ -64,6 +72,11 @@ function readStoredSession(): AuthSession | null {
     const session = JSON.parse(raw) as Partial<AuthSession>;
 
     if (!session.accessToken || !session.refreshToken || !session.userId || !session.email) {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      return null;
+    }
+
+    if (!Array.isArray(session.roles)) {
       localStorage.removeItem(AUTH_STORAGE_KEY);
       return null;
     }
@@ -212,9 +225,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       register,
       logout,
+      refresh: refreshSession,
       authenticatedFetch,
     }),
-    [authenticatedFetch, login, logout, register, session],
+    [authenticatedFetch, login, logout, refreshSession, register, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

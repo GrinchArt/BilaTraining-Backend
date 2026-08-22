@@ -18,6 +18,7 @@ public sealed class CreateClientHandler(
         client.UpdateNotes(request.Notes);
 
         db.Clients.Add(client);
+        db.CoachClientRelationships.Add(new CoachClientRelationship(currentUser.UserId, client.Id));
         await db.SaveChangesAsync(ct);
 
         return client.Id;

@@ -1,14 +1,17 @@
 import { useState, type FormEvent } from 'react';
-import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { NavLink, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { AppShell } from './app/AppShell';
-import { AnonymousOnlyRoute, ProtectedRoute } from './app/RouteGuards';
-import { useAuth } from './auth';
+import { AnonymousOnlyRoute, ClientRoute, ProtectedRoute, TrainerRoute } from './app/RouteGuards';
+import { CLIENT_ROLE, TRAINER_ROLE, useAuth } from './auth';
 import { CalendarDayPage as CalendarDayRoutePage } from './features/calendar/CalendarDayPage';
 import { CalendarPage as CalendarRoutePage } from './features/calendar/CalendarPage';
 import { CalendarSessionFormPage as CalendarSessionRoutePage } from './features/calendar/CalendarSessionFormPage';
 import { ClientFormPage, ClientsPage as ClientsRoutePage } from './features/clients/ClientsPage';
+import { ClientDashboardPage } from './features/dashboard/ClientDashboardPage';
 import { ExerciseFormPage, ExercisesPage as ExercisesRoutePage } from './features/exercises/ExercisesPage';
+import { InvitationPage } from './features/invitations/InvitationPage';
+import { BodyMeasurementsPage } from './features/measurements/BodyMeasurementsPage';
 import { ProfilePage as ProfileRoutePage } from './features/profile/ProfilePage';
 import { ReportsPage as ReportsRoutePage } from './features/reports/ReportsPage';
 import { SessionFormPage, SessionsPage as SessionsRoutePage } from './features/sessions/SessionsPage';
@@ -22,6 +25,23 @@ function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<LandingPage />} />
+        <Route path="join/:token" element={<InvitationPage />} />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute>
+              <ClientDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="measurements"
+          element={
+            <ClientRoute>
+              <BodyMeasurementsPage />
+            </ClientRoute>
+          }
+        />
         <Route
           path="auth/login"
           element={
@@ -41,137 +61,145 @@ function App() {
         <Route
           path="clients"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ClientsRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="clients/new"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ClientFormPage mode="create" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="clients/:clientId/edit"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ClientFormPage mode="edit" />
-            </ProtectedRoute>
+            </TrainerRoute>
+          }
+        />
+        <Route
+          path="clients/:clientId/measurements"
+          element={
+            <TrainerRoute>
+              <BodyMeasurementsPage />
+            </TrainerRoute>
           }
         />
         <Route
           path="workspaces"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <WorkspacesRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="workspaces/new"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <WorkspaceFormPage mode="create" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="workspaces/:workspaceId/edit"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <WorkspaceFormPage mode="edit" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="exercises"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ExercisesRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="exercises/new"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ExerciseFormPage mode="create" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="exercises/:exerciseId/edit"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ExerciseFormPage mode="edit" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="sessions"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <SessionsRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="sessions/new"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <SessionFormPage mode="create" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="sessions/:sessionId/edit"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <SessionFormPage mode="edit" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="calendar"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <CalendarRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="calendar/day/:dayKey"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <CalendarDayRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="calendar/day/:dayKey/session/new"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <CalendarSessionRoutePage mode="create" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="calendar/day/:dayKey/session/:sessionId"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <CalendarSessionRoutePage mode="edit" />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
           path="calendar/day/:dayKey/session/:sessionId/tracking"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <SessionTrackingRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
         <Route
@@ -185,9 +213,9 @@ function App() {
         <Route
           path="reports"
           element={
-            <ProtectedRoute>
+            <TrainerRoute>
               <ReportsRoutePage />
-            </ProtectedRoute>
+            </TrainerRoute>
           }
         />
       </Route>
@@ -197,12 +225,17 @@ function App() {
 }
 
 function LandingPage() {
-  const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? '/calendar' : '/auth/login'} replace />;
+  const { isAuthenticated, session } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/auth/login" replace />;
+
+  const isTrainer = session?.roles.includes(TRAINER_ROLE) ?? false;
+  const isClient = session?.roles.includes(CLIENT_ROLE) ?? false;
+  return <Navigate to={isTrainer ? '/calendar' : isClient ? '/dashboard' : '/profile'} replace />;
 }
 
 function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const { t } = useI18n();
   const [email, setEmail] = useState('');
@@ -222,8 +255,12 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login({ email: email.trim(), password });
-      navigate('/');
+      await login({
+        email: email.trim(),
+        password,
+        invitationToken: readInvitationToken(searchParams.get('returnTo')),
+      });
+      navigate(readSafeReturnTo(searchParams.get('returnTo')) ?? '/');
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
@@ -269,7 +306,10 @@ function LoginPage() {
 
       <p className="hint">
         {t('auth.needAccount')}{' '}
-        <NavLink to="/auth/register" className="switch-link">
+        <NavLink
+          to={`/auth/register${searchParams.get('returnTo') ? `?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}` : ''}`}
+          className="switch-link"
+        >
           {t('auth.createAccountLink')}
         </NavLink>
       </p>
@@ -279,6 +319,7 @@ function LoginPage() {
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useAuth();
   const { t } = useI18n();
   const [displayName, setDisplayName] = useState('');
@@ -303,8 +344,9 @@ function RegisterPage() {
         email: email.trim(),
         password,
         displayName: displayName.trim() || null,
+        invitationToken: readInvitationToken(searchParams.get('returnTo')),
       });
-      navigate('/');
+      navigate(readSafeReturnTo(searchParams.get('returnTo')) ?? '/');
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
@@ -361,7 +403,10 @@ function RegisterPage() {
 
       <p className="hint">
         {t('auth.alreadyRegistered')}{' '}
-        <NavLink to="/auth/login" className="switch-link">
+        <NavLink
+          to={`/auth/login${searchParams.get('returnTo') ? `?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}` : ''}`}
+          className="switch-link"
+        >
           {t('auth.goToLogin')}
         </NavLink>
       </p>
@@ -370,6 +415,16 @@ function RegisterPage() {
 }
 
 export default App;
+
+function readSafeReturnTo(value: string | null) {
+  return value?.startsWith('/') && !value.startsWith('//') ? value : null;
+}
+
+function readInvitationToken(returnTo: string | null) {
+  const safeReturnTo = readSafeReturnTo(returnTo);
+  const match = safeReturnTo?.match(/^\/join\/([^/?#]+)$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 
 

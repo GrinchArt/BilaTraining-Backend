@@ -3,13 +3,14 @@ using BilaTraining.Application.Features.WorkspaceClients.Commands.RemoveClientFr
 using BilaTraining.Application.Features.WorkspaceClients.Dtos;
 using BilaTraining.Application.Features.WorkspaceClients.Queries.GetWorkspaceClients;
 using BilaTraining.Application.Messaging;
+using BilaTraining.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BilaTraining.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AppRoles.Trainer)]
 [Route("api/workspaces/{workspaceId:guid}/clients")]
 public sealed class WorkspaceClientsController : ControllerBase
 {

@@ -5,6 +5,58 @@ export type Client = {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  relationshipStatus: CoachClientRelationshipStatus;
+  isLinked: boolean;
+};
+
+export type CoachClientRelationshipStatus = 0 | 1 | 2 | 3 | 4;
+
+export type InvitationPreview = {
+  coachName: string;
+  clientName: string;
+  expiresAtUtc: string;
+};
+
+export type ClientRelationship = {
+  id: string;
+  clientId: string;
+  coachName: string;
+  status: CoachClientRelationshipStatus;
+  startedAtUtc: string | null;
+};
+
+export type ClientDashboardSession = {
+  id: string;
+  relationshipId: string;
+  coachName: string;
+  workspaceName: string;
+  startAtUtc: string;
+  endAtUtc: string;
+  status: SessionStatus;
+  notes: string | null;
+};
+
+export type ClientDashboard = {
+  relationships: ClientRelationship[];
+  sessions: ClientDashboardSession[];
+};
+
+export type BodyMeasurement = {
+  id: string;
+  recordedOn: string;
+  weightKg: number | null;
+  heightCm: number | null;
+  bodyFatPercent: number | null;
+  neckCm: number | null;
+  chestCm: number | null;
+  waistCm: number | null;
+  hipsCm: number | null;
+  bicepsCm: number | null;
+  thighCm: number | null;
+  calfCm: number | null;
+  notes: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
 };
 
 export type Exercise = {
