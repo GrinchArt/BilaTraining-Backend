@@ -14,10 +14,25 @@ public sealed class GetClientByIdHandler(
     {
         EnsureAuthenticated(currentUser);
 
-        var client = await db.Clients
-            .AsNoTracking()
-            .Where(c => c.Id == request.Id && c.UserId == currentUser.UserId && !c.IsDeleted)
-            .Select(c => new ClientDto(c.Id, c.FirstName, c.LastName, c.Phone, c.Email, c.Notes))
+        var client = await (
+            from item in db.Clients.AsNoTracking()
+            join relationship in db.CoachClientRelationships.AsNoTracking()
+                on new { CoachUserId = item.UserId, ClientId = item.Id }
+                equals new { relationship.CoachUserId, relationship.ClientId }
+                into relationships
+            from relationship in relationships.DefaultIfEmpty()
+            where item.Id == request.Id && item.UserId == currentUser.UserId && !item.IsDeleted
+            select new ClientDto(
+                item.Id,
+                item.FirstName,
+                item.LastName,
+                item.Phone,
+                item.Email,
+                item.Notes,
+                relationship == null
+                    ? Domain.Enums.CoachClientRelationshipStatus.Managed
+                    : relationship.Status,
+                item.LinkedUserId.HasValue))
             .SingleOrDefaultAsync(ct);
 
         return client ?? throw new KeyNotFoundException($"Client '{request.Id}' was not found.");

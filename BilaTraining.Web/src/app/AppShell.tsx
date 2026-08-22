@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { useAuth } from '../auth';
+import { CLIENT_ROLE, TRAINER_ROLE, useAuth } from '../auth';
 import { useI18n } from '../i18n';
 
 type BottomNavItem = {
@@ -13,19 +13,23 @@ type BottomNavItem = {
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, session } = useAuth();
   const { t } = useI18n();
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const isTrainer = session?.roles.includes(TRAINER_ROLE) ?? false;
+  const isClient = session?.roles.includes(CLIENT_ROLE) ?? false;
 
   const showBottomNav = isAuthenticated && !location.pathname.startsWith('/auth/');
   const isMoreActive = useMemo(
-    () => ['/clients', '/workspaces', '/exercises'].some((path) => location.pathname.startsWith(path)),
-    [location.pathname],
+    () => isTrainer && ['/clients', '/workspaces', '/exercises'].some((path) => location.pathname.startsWith(path)),
+    [isTrainer, location.pathname],
   );
 
   const bottomNavItems = useMemo<BottomNavItem[]>(
-    () => [
-      {
+    () => {
+      const items: BottomNavItem[] = [];
+
+      if (isTrainer) items.push({
         to: '/calendar',
         label: t('nav.calendar'),
         icon: (
@@ -35,8 +39,8 @@ export function AppShell() {
             <path d="M8 12.5h.01M12 12.5h.01M16 12.5h.01M8 16.5h.01M12 16.5h.01M16 16.5h.01" />
           </svg>
         ),
-      },
-      {
+      });
+      if (isTrainer) items.push({
         to: '/reports',
         label: t('nav.reports'),
         icon: (
@@ -47,8 +51,29 @@ export function AppShell() {
             <path d="M17 16v-3.5" />
           </svg>
         ),
-      },
-      {
+      });
+      if (isClient) items.push({
+        to: '/dashboard',
+        label: t('nav.dashboard'),
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 20V10l8-6 8 6v10" />
+            <path d="M8 20v-6h8v6" />
+          </svg>
+        ),
+      });
+      if (isClient) items.push({
+        to: '/measurements',
+        label: t('nav.measurements'),
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5h16" />
+            <path d="m5.5 15 4-4 3 2.5 6-7" />
+            <path d="M15.5 6.5h3v3" />
+          </svg>
+        ),
+      });
+      items.push({
         to: '/profile',
         label: t('nav.profile'),
         icon: (
@@ -57,9 +82,10 @@ export function AppShell() {
             <path d="M5 20a7 7 0 0 1 14 0" />
           </svg>
         ),
-      },
-    ],
-    [t],
+      });
+      return items;
+    },
+    [isClient, isTrainer, t],
   );
 
   const moreItems = useMemo(
@@ -99,7 +125,7 @@ export function AppShell() {
       <header className="shell__header">
         <div className="shell__header-main">
           <h1>{t('app.name')}</h1>
-          <p>{t('app.dashboard')}</p>
+          <p>{t(isTrainer ? 'app.dashboard' : 'dashboard.eyebrow')}</p>
         </div>
       </header>
 
@@ -119,7 +145,7 @@ export function AppShell() {
               </NavLink>
             ))}
 
-            <button
+            {isTrainer ? <button
               type="button"
               className={`shell__bottom-nav-link shell__bottom-nav-link--button${moreMenuOpen || isMoreActive ? ' is-active' : ''}`}
               aria-expanded={moreMenuOpen}
@@ -132,10 +158,10 @@ export function AppShell() {
                 </svg>
               </span>
               <span>{t('nav.more')}</span>
-            </button>
+            </button> : null}
           </nav>
 
-          {moreMenuOpen ? (
+          {isTrainer && moreMenuOpen ? (
             <section id="shell-more-menu" className="shell__more-sheet" role="dialog" aria-modal="true" aria-labelledby="shell-more-title">
               <div className="shell__more-sheet-header">
                 <div>

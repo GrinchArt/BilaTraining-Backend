@@ -5,13 +5,14 @@ using BilaTraining.Application.Features.Clients.Dtos;
 using BilaTraining.Application.Features.Clients.Queries.GetClientById;
 using BilaTraining.Application.Features.Clients.Queries.GetClients;
 using BilaTraining.Application.Messaging;
+using BilaTraining.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BilaTraining.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AppRoles.Trainer)]
 [Route("api/[controller]")]
 public sealed class ClientsController : ControllerBase
 {

@@ -21,6 +21,9 @@ public sealed class ApplicationDbContext
     public DbSet<Exercise> Exercises => Set<Exercise>();
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<WorkspaceClient> WorkspaceClients => Set<WorkspaceClient>();
+    public DbSet<CoachClientRelationship> CoachClientRelationships => Set<CoachClientRelationship>();
+    public DbSet<ClientInvitation> ClientInvitations => Set<ClientInvitation>();
+    public DbSet<BodyMeasurement> BodyMeasurements => Set<BodyMeasurement>();
     public DbSet<SessionExercise> SessionExercises => Set<SessionExercise>();
     public DbSet<SessionExerciseSet> SessionExerciseSets => Set<SessionExerciseSet>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

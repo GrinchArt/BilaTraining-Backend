@@ -5,13 +5,14 @@ using BilaTraining.Application.Features.Workspaces.Dtos;
 using BilaTraining.Application.Features.Workspaces.Queries.GetWorkspaceById;
 using BilaTraining.Application.Features.Workspaces.Queries.GetWorkspaces;
 using BilaTraining.Application.Messaging;
+using BilaTraining.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BilaTraining.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AppRoles.Trainer)]
 [Route("api/[controller]")]
 public sealed class WorkspacesController : ControllerBase
 {

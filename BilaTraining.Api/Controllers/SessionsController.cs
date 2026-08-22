@@ -7,13 +7,14 @@ using BilaTraining.Application.Features.Sessions.Queries.GetSessionById;
 using BilaTraining.Application.Features.Sessions.Queries.GetSessions;
 using BilaTraining.Application.Messaging;
 using BilaTraining.Domain.Enums;
+using BilaTraining.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BilaTraining.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AppRoles.Trainer)]
 [Route("api/[controller]")]
 public sealed class SessionsController : ControllerBase
 {

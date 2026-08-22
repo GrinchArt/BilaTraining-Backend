@@ -4,13 +4,14 @@ using BilaTraining.Application.Features.SessionExerciseSets.Commands.UpdateSessi
 using BilaTraining.Application.Features.SessionExerciseSets.Dtos;
 using BilaTraining.Application.Features.SessionExerciseSets.Queries.GetSessionExerciseSets;
 using BilaTraining.Application.Messaging;
+using BilaTraining.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BilaTraining.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AppRoles.Trainer)]
 [Route("api")]
 public sealed class SessionExerciseSetsController : ControllerBase
 {

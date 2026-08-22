@@ -5,7 +5,13 @@ import { useAuth } from '../../auth';
 import { useI18n } from '../../i18n';
 import { getJson, sendJson, sendVoid, toMessage } from '../../shared/api';
 import { formatClientName } from '../../shared/client.utils';
-import type { Client } from '../../shared/models';
+import type { Client, CoachClientRelationshipStatus } from '../../shared/models';
+
+type InvitationLink = {
+  clientId: string;
+  url: string;
+  expiresAtUtc: string;
+};
 
 type ClientFormState = {
   firstName: string;
@@ -36,6 +42,9 @@ export function ClientsPage() {
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState('');
+  const [invitationLink, setInvitationLink] = useState<InvitationLink | null>(null);
+  const [isGeneratingInvitation, setIsGeneratingInvitation] = useState(false);
+  const [isRevokingInvitation, setIsRevokingInvitation] = useState(false);
 
   const activeClient = useMemo(
     () => clients.find((client) => client.id === activeClientId) ?? null,
@@ -134,6 +143,71 @@ export function ClientsPage() {
     }
   };
 
+  const handleGenerateInvitation = async (client: Client) => {
+    setIsGeneratingInvitation(true);
+    setErrorMessage('');
+    try {
+      const response = await sendJson<{ token: string; expiresAtUtc: string }>(
+        `${apiBaseUrl}/clients/${client.id}/invitation`,
+        'POST',
+        authenticatedFetch,
+        {},
+        t('invitation.generateFailed'),
+      );
+
+      if (response) {
+        setInvitationLink({
+          clientId: client.id,
+          url: `${window.location.origin}/join/${encodeURIComponent(response.token)}`,
+          expiresAtUtc: response.expiresAtUtc,
+        });
+      }
+      await loadClients();
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsGeneratingInvitation(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (client: Client) => {
+    setIsRevokingInvitation(true);
+    setErrorMessage('');
+    try {
+      await sendVoid(
+        `${apiBaseUrl}/clients/${client.id}/invitation`,
+        'DELETE',
+        authenticatedFetch,
+        t('invitation.revokeFailed'),
+      );
+      setInvitationLink((current) => (current?.clientId === client.id ? null : current));
+      await loadClients();
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setIsRevokingInvitation(false);
+    }
+  };
+
+  const copyInvitation = async () => {
+    if (!invitationLink) return;
+    await navigator.clipboard.writeText(invitationLink.url);
+  };
+
+  const shareInvitation = async (client: Client) => {
+    if (!invitationLink) return;
+    if (navigator.share) {
+      await navigator.share({
+        title: t('invitation.shareTitle'),
+        text: t('invitation.shareText', { name: formatClientName(client) }),
+        url: invitationLink.url,
+      });
+      return;
+    }
+
+    await copyInvitation();
+  };
+
   return (
     <section className="exercise-page clients-page">
       <div className="exercise-page__header clients-page__header">
@@ -169,6 +243,9 @@ export function ClientsPage() {
                     <button type="button" className="client-list__trigger" onClick={() => setActiveClientId(client.id)}>
                       <div className="client-list__primary">
                         <strong>{formatClientName(client)}</strong>
+                        <span className={`relationship-badge relationship-badge--${client.relationshipStatus}`}>
+                          {relationshipStatusLabel(client.relationshipStatus, t)}
+                        </span>
                       </div>
                     </button>
                     <div className="data-table__menu">
@@ -251,12 +328,95 @@ export function ClientsPage() {
                 <p className="client-modal__label">{t('common.notes')}</p>
                 <p className={activeClient.notes ? undefined : 'exercise-item__muted'}>{activeClient.notes ?? t('common.noNotes')}</p>
               </div>
+
+              <div className="client-modal__field">
+                <p className="client-modal__label">{t('invitation.relationshipStatus')}</p>
+                <span className={`relationship-badge relationship-badge--${activeClient.relationshipStatus}`}>
+                  {relationshipStatusLabel(activeClient.relationshipStatus, t)}
+                </span>
+              </div>
+
+              {activeClient.relationshipStatus === 2 ? (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={() => navigate(`/clients/${activeClient.id}/measurements`)}
+                >
+                  {t('measurements.openClientMeasurements')}
+                </button>
+              ) : null}
+
+              <div className="client-invitation-panel">
+                <h4>{t('invitation.trainerPanelTitle')}</h4>
+                <p>{t('invitation.trainerPanelDescription')}</p>
+
+                {invitationLink?.clientId === activeClient.id ? (
+                  <div className="client-invitation-panel__link">
+                    <input type="text" readOnly value={invitationLink.url} aria-label={t('invitation.linkLabel')} />
+                    <small>
+                      {t('invitation.validUntil', {
+                        date: new Date(invitationLink.expiresAtUtc).toLocaleDateString(),
+                      })}
+                    </small>
+                    <div className="client-invitation-panel__actions">
+                      <button type="button" className="button" onClick={() => void copyInvitation()}>
+                        {t('invitation.copy')}
+                      </button>
+                      <button type="button" className="button button--ghost" onClick={() => void shareInvitation(activeClient)}>
+                        {t('invitation.share')}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeClient.relationshipStatus !== 2 && activeClient.relationshipStatus !== 3 ? (
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={isGeneratingInvitation}
+                    onClick={() => void handleGenerateInvitation(activeClient)}
+                  >
+                    {isGeneratingInvitation
+                      ? t('invitation.generating')
+                      : activeClient.relationshipStatus === 1
+                        ? t('invitation.regenerate')
+                        : t('invitation.generate')}
+                  </button>
+                ) : (
+                  <p className="client-invitation-panel__linked">{t('invitation.alreadyLinked')}</p>
+                )}
+
+                {activeClient.relationshipStatus === 1 ? (
+                  <button
+                    type="button"
+                    className="button button--danger"
+                    disabled={isRevokingInvitation}
+                    onClick={() => void handleRevokeInvitation(activeClient)}
+                  >
+                    {isRevokingInvitation ? t('invitation.revoking') : t('invitation.revoke')}
+                  </button>
+                ) : null}
+              </div>
             </div>
           </section>
         </div>
       ) : null}
     </section>
   );
+}
+
+function relationshipStatusLabel(
+  status: CoachClientRelationshipStatus,
+  t: ReturnType<typeof useI18n>['t'],
+) {
+  const keys = {
+    0: 'relationship.managed',
+    1: 'relationship.pending',
+    2: 'relationship.active',
+    3: 'relationship.paused',
+    4: 'relationship.ended',
+  } as const;
+  return t(keys[status]);
 }
 
 export function ClientFormPage({ mode }: { mode: 'create' | 'edit' }) {

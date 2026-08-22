@@ -15,7 +15,7 @@ public sealed class JwtTokenGenerator
         _options = options;
     }
 
-    public string GenerateToken(AppUser user)
+    public string GenerateToken(AppUser user, IEnumerable<string> roles)
     {
         var claims = new List<Claim>
         {
@@ -25,6 +25,8 @@ public sealed class JwtTokenGenerator
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new(ClaimTypes.Name, user.DisplayName ?? user.Email ?? user.UserName ?? string.Empty)
         };
+
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey)),

@@ -2,13 +2,14 @@ using BilaTraining.Application.Features.Reports.Dtos;
 using BilaTraining.Application.Features.Reports.Queries.GetExerciseProgressReport;
 using BilaTraining.Application.Features.Reports.Queries.GetSessionOverviewReport;
 using BilaTraining.Application.Messaging;
+using BilaTraining.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BilaTraining.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AppRoles.Trainer)]
 [Route("api/[controller]")]
 public sealed class ReportsController : ControllerBase
 {
